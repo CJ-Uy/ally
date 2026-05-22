@@ -27,3 +27,5 @@ dist-electron
 *.njsproj
 *.sln
 *.sw?
+
+.claude/*
