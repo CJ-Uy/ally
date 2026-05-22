@@ -43,55 +43,95 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <header className="app__header">
-        <h1>Ally Desktop</h1>
-        <p>Turso + Drizzle + R2 (Electron)</p>
-      </header>
-
-      <section className="app__card">
-        <h2>Health checks</h2>
-        <div className="app__actions">
-          <button type="button" onClick={handlePing}>
-            Ping
-          </button>
-          <button type="button" onClick={handleDbHealth}>
-            Check DB
-          </button>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand__mark">A</span>
+          <span>Ally</span>
         </div>
-        <div className="app__status">
-          <span>Ping: {ping}</span>
-          <span>DB: {dbStatus}</span>
-        </div>
-      </section>
-
-      <section className="app__card">
-        <h2>R2 list</h2>
-        <div className="app__actions">
-          <input
-            value={prefix}
-            onChange={(event) => setPrefix(event.target.value)}
-            placeholder="Prefix (optional)"
-          />
-          <button type="button" onClick={handleR2List}>
-            List objects
+        <nav className="nav">
+          <button className="nav__item nav__item--active" type="button">
+            Dashboard
           </button>
-        </div>
-        <ul className="app__list">
-          {r2Objects.length === 0 ? (
-            <li className="app__muted">No objects loaded</li>
-          ) : (
-            r2Objects.map((obj) => (
-              <li key={obj.key}>
-                <span>{obj.key}</span>
-                <span className="app__muted">{obj.size} bytes</span>
-              </li>
-            ))
-          )}
-        </ul>
-      </section>
+          <button className="nav__item" type="button">
+            Files
+          </button>
+          <button className="nav__item" type="button">
+            Sync
+          </button>
+        </nav>
+      </aside>
 
-      {error ? <p className="app__error">{error}</p> : null}
+      <main className="workspace">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Electron window mock</p>
+            <h1>Ally Desktop</h1>
+          </div>
+          <span className="badge">Dev build</span>
+        </header>
+
+        <section className="hero-panel">
+          <div>
+            <p className="eyebrow">Native shell is running</p>
+            <h2>This is the desktop app window.</h2>
+            <p>
+              React is rendering inside Electron. These controls talk to the
+              preload bridge.
+            </p>
+          </div>
+          <div className="signal">
+            <span>Window</span>
+            <strong>Open</strong>
+          </div>
+        </section>
+
+        <div className="panel-grid">
+          <section className="panel">
+            <h3>Health Checks</h3>
+            <div className="app__actions">
+              <button type="button" onClick={handlePing}>
+                Ping Electron
+              </button>
+              <button type="button" onClick={handleDbHealth}>
+                Check DB
+              </button>
+            </div>
+            <div className="status-row">
+              <span>Ping: {ping}</span>
+              <span>DB: {dbStatus}</span>
+            </div>
+          </section>
+
+          <section className="panel">
+            <h3>R2 Objects</h3>
+            <div className="app__actions">
+              <input
+                value={prefix}
+                onChange={(event) => setPrefix(event.target.value)}
+                placeholder="Prefix (optional)"
+              />
+              <button type="button" onClick={handleR2List}>
+                List
+              </button>
+            </div>
+            <ul className="app__list">
+              {r2Objects.length === 0 ? (
+                <li className="app__muted">No objects loaded</li>
+              ) : (
+                r2Objects.map((obj) => (
+                  <li key={obj.key}>
+                    <span>{obj.key}</span>
+                    <span className="app__muted">{obj.size} bytes</span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </section>
+        </div>
+
+        {error ? <p className="app__error">{error}</p> : null}
+      </main>
     </div>
   );
 }

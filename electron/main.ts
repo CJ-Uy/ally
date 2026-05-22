@@ -31,12 +31,24 @@ let win: Electron.BrowserWindow | null;
 
 function createWindow() {
   win = new BrowserWindow({
+    title: "Ally Desktop",
+    width: 1120,
+    height: 760,
+    minWidth: 900,
+    minHeight: 640,
+    backgroundColor: "#f5f7fb",
+    show: false,
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  win.once("ready-to-show", () => {
+    win?.show();
+    win?.focus();
   });
 
   if (VITE_DEV_SERVER_URL) {
