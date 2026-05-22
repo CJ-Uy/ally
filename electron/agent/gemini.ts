@@ -1,0 +1,96 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { agentConfig } from "./config";
+import { formatContext, readMockContext } from "./context";
+import type { ChatMessage } from "../session";
+import { clampMinutes } from "../session";
+
+const MODEL_NAME = "gemini-2.5-flash";
+
+const DECISION_LINE_RE = /^DECISION:\s*(\{[^\n]*\})\s*$/m;
+
+export interface AgentDecision {
+  granted: boolean;
+  minutes?: number;
+}
+
+export interface AgentReply {
+  visibleText: string;
+  decision?: AgentDecision;
+}
+
+let client: GoogleGenerativeAI | null = null;
+
+function getClient(): GoogleGenerativeAI {
+  if (client) return client;
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not set");
+  }
+  client = new GoogleGenerativeAI(apiKey);
+  return client;
+}
+
+function parseDecision(text: string): { stripped: string; decision?: AgentDecision } {
+  const match = text.match(DECISION_LINE_RE);
+  if (!match) return { stripped: text };
+
+  try {
+    const parsed = JSON.parse(match[1]) as unknown;
+    if (typeof parsed !== "object" || parsed === null) {
+      return { stripped: text.replace(DECISION_LINE_RE, "").trim() };
+    }
+    const obj = parsed as { granted?: unknown; minutes?: unknown };
+    if (typeof obj.granted !== "boolean") {
+      return { stripped: text.replace(DECISION_LINE_RE, "").trim() };
+    }
+
+    const decision: AgentDecision = { granted: obj.granted };
+    if (obj.granted) {
+      const raw = typeof obj.minutes === "number" ? obj.minutes : 1;
+      decision.minutes = clampMinutes(raw);
+    }
+
+    return {
+      stripped: text.replace(DECISION_LINE_RE, "").trim(),
+      decision,
+    };
+  } catch {
+    return { stripped: text.replace(DECISION_LINE_RE, "").trim() };
+  }
+}
+
+export async function sendToAgent(
+  history: ChatMessage[],
+  userMessage: string,
+): Promise<AgentReply> {
+  try {
+    const contextBlock = formatContext(readMockContext());
+    const systemInstruction = `${agentConfig.instructions}\n\n${contextBlock}`;
+
+    const model = getClient().getGenerativeModel({
+      model: MODEL_NAME,
+      systemInstruction,
+    });
+
+    const chat = model.startChat({
+      history: history.map((m) => ({
+        role: m.role,
+        parts: [{ text: m.text }],
+      })),
+    });
+
+    const result = await chat.sendMessage(userMessage);
+    const text = result.response.text();
+    const { stripped, decision } = parseDecision(text);
+
+    return {
+      visibleText: stripped.length > 0 ? stripped : "…",
+      decision,
+    };
+  } catch (err) {
+    console.error("[gemini] error:", err);
+    return {
+      visibleText: "Agent unavailable, try again.",
+    };
+  }
+}

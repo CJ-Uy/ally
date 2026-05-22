@@ -1,0 +1,43 @@
+{
+  "studySession": {
+    "active": true,
+    "startedAt": "2026-05-22T09:00:00Z",
+    "elapsedMinutes": 87,
+    "currentSubject": "Linear Algebra"
+  },
+  "todayTasks": [
+    {
+      "id": "t1",
+      "subject": "Linear Algebra",
+      "title": "Practice problems Ch. 4",
+      "done": true
+    },
+    {
+      "id": "t2",
+      "subject": "Linear Algebra",
+      "title": "Review eigenvalues notes",
+      "done": false
+    },
+    {
+      "id": "t3",
+      "subject": "History",
+      "title": "Read Module 3",
+      "done": true
+    }
+  ],
+  "calendar": [
+    {
+      "title": "Linear Algebra midterm",
+      "date": "2026-05-25T08:00:00Z",
+      "type": "exam"
+    }
+  ],
+  "streaks": {
+    "currentDays": 4,
+    "breaksUsedToday": 1
+  },
+  "userProfile": {
+    "studyHoursPerWeek": 20,
+    "educationLevel": "college"
+  }
+}

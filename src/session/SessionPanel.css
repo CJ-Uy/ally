@@ -1,0 +1,68 @@
+.session-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.session-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.session-state::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.session-state--idle {
+  background: rgba(107, 114, 128, 0.12);
+  color: #4b5563;
+}
+
+.session-state--studying {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.session-state--paused {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.session-state--break {
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+}
+
+.session-elapsed {
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.session-toggle {
+  align-self: flex-start;
+}
+
+.session-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}

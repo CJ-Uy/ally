@@ -1,0 +1,101 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family:
+    "Segoe UI Variable",
+    "Segoe UI",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  -webkit-app-region: drag;
+}
+
+#orb-root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orb {
+  -webkit-app-region: no-drag;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.25;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.orb:hover,
+.orb:focus-visible {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.orb__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.orb__countdown {
+  font-size: 15px;
+}
+
+.orb--idle {
+  background: radial-gradient(circle at 30% 30%, #6b7280, #374151);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.orb--studying {
+  background: radial-gradient(circle at 30% 30%, #60a5fa, #1d4ed8);
+  box-shadow:
+    0 6px 20px rgba(29, 78, 216, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: orb-pulse 2.4s ease-in-out infinite;
+}
+
+.orb--break {
+  background: radial-gradient(circle at 30% 30%, #34d399, #047857);
+  box-shadow:
+    0 6px 20px rgba(4, 120, 87, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+@keyframes orb-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 6px 20px rgba(29, 78, 216, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 8px 28px rgba(96, 165, 250, 0.85),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+}

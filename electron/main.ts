@@ -1,12 +1,25 @@
 import "dotenv/config";
-import electron from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { db } from "./db";
 import { r2 } from "./r2";
-
-const { app, BrowserWindow, ipcMain, shell } =
-  electron as typeof import("electron");
+import {
+  appendModelMessage,
+  appendUserMessage,
+  currentLockKeyword,
+  getHistory,
+  grantBreak,
+  isSessionActive,
+  resumeFromNegotiation,
+  setGrace,
+  snapshot,
+  startSession,
+  stopSession,
+} from "./session";
+import { sendToAgent } from "./agent/gemini";
+import { createLockWindow, createOrbWindow } from "./windows";
+import { startPoller, stopPoller } from "./poller";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // │ │
 // │ ├─┬ dist-electron
 // │ │ ├── main.js
-// │ │ └── preload.mjs
+// │ │ └── preload.js
 // │
 process.env.APP_ROOT = path.join(__dirname, "..");
 
@@ -31,6 +44,9 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   : RENDERER_DIST;
 
 let win: Electron.BrowserWindow | null;
+let orbWin: Electron.BrowserWindow | null = null;
+let lockWin: Electron.BrowserWindow | null = null;
+const GRACE_MS = 5000;
 
 function isAllowedNavigation(url: string) {
   try {
@@ -90,7 +106,7 @@ function createWindow() {
     show: false,
     icon: path.join(process.env.VITE_PUBLIC, "electron-vite.svg"),
     webPreferences: {
-      preload: path.join(__dirname, "preload.mjs"),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -145,13 +161,131 @@ app.on("activate", () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    bootstrap();
   }
 });
 
-app.whenReady().then(createWindow);
+function broadcastState() {
+  const snap = snapshot();
+  for (const w of [win, orbWin, lockWin]) {
+    if (w && !w.isDestroyed()) {
+      w.webContents.send("state:update", snap);
+    }
+  }
+}
+
+function closeLockWindow() {
+  if (lockWin && !lockWin.isDestroyed()) {
+    lockWin.destroy();
+  }
+  lockWin = null;
+}
+
+function openLockWindow(info: { keyword: string; title: string }) {
+  if (lockWin && !lockWin.isDestroyed()) return;
+  lockWin = createLockWindow();
+  lockWin.on("closed", () => {
+    lockWin = null;
+  });
+  lockWin.webContents.once("did-finish-load", () => {
+    lockWin?.webContents.send("lock:open", info);
+  });
+}
+
+function bootstrap() {
+  createWindow();
+  orbWin = createOrbWindow();
+  orbWin.on("closed", () => {
+    orbWin = null;
+  });
+
+  startPoller({
+    onLockTrigger: (info) => {
+      openLockWindow(info);
+      broadcastState();
+    },
+    onBreakEnd: () => {
+      broadcastState();
+    },
+    onStateTick: () => {
+      broadcastState();
+    },
+  });
+}
+
+app.whenReady().then(bootstrap);
+
+app.on("before-quit", () => {
+  stopPoller();
+});
 
 ipcMain.handle("app:ping", async () => "pong");
+
+ipcMain.handle("session:start", async () => {
+  if (!isSessionActive()) {
+    startSession();
+    broadcastState();
+  }
+});
+
+ipcMain.handle("session:stop", async () => {
+  if (isSessionActive()) {
+    stopSession();
+    closeLockWindow();
+    broadcastState();
+  }
+});
+
+ipcMain.handle("session:getState", async () => snapshot());
+
+ipcMain.handle("lock:close", async () => {
+  const keyword = currentLockKeyword();
+  if (keyword) {
+    setGrace(keyword, GRACE_MS);
+  }
+  resumeFromNegotiation();
+  closeLockWindow();
+  broadcastState();
+});
+
+ipcMain.handle(
+  "chat:send",
+  async (_event: Electron.IpcMainInvokeEvent, payload: unknown) => {
+    const text =
+      typeof payload === "object" && payload !== null && "text" in payload
+        ? String((payload as { text: unknown }).text ?? "")
+        : "";
+    if (text.trim().length === 0) {
+      return { visibleText: "" };
+    }
+
+    const history = getHistory();
+    appendUserMessage(text);
+    const reply = await sendToAgent(history, text);
+    appendModelMessage(reply.visibleText);
+
+    if (reply.decision?.granted && reply.decision.minutes !== undefined) {
+      const keyword = currentLockKeyword() ?? "unknown";
+      grantBreak(keyword, reply.decision.minutes);
+      closeLockWindow();
+      broadcastState();
+      return {
+        visibleText: reply.visibleText,
+        granted: true,
+        minutes: reply.decision.minutes,
+      };
+    }
+
+    if (reply.decision && reply.decision.granted === false) {
+      return {
+        visibleText: reply.visibleText,
+        granted: false,
+      };
+    }
+
+    return { visibleText: reply.visibleText };
+  },
+);
 
 ipcMain.handle("db:health", async () => {
   await db.$client.execute("select 1");

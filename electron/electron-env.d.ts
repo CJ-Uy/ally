@@ -21,6 +21,24 @@ declare namespace NodeJS {
   }
 }
 
+interface SessionStateSnapshot {
+  session: { active: boolean; elapsedMs: number; paused: boolean };
+  break: { active: boolean; msRemaining: number; forKeyword?: string };
+}
+
+interface ChatSendResult {
+  visibleText: string;
+  granted?: boolean;
+  minutes?: number;
+}
+
+interface LockOpenInfo {
+  keyword: string;
+  title: string;
+}
+
+type Unsubscribe = () => void;
+
 // Used in Renderer process, expose in `preload.ts`
 interface Window {
   api: {
@@ -37,5 +55,12 @@ interface Window {
       cursor?: string;
       delimitedPrefixes: string[];
     }>;
+    sessionStart: () => Promise<void>;
+    sessionStop: () => Promise<void>;
+    sessionGetState: () => Promise<SessionStateSnapshot>;
+    chatSend: (text: string) => Promise<ChatSendResult>;
+    lockClose: () => Promise<void>;
+    onStateUpdate: (cb: (snap: SessionStateSnapshot) => void) => Unsubscribe;
+    onLockOpen: (cb: (info: LockOpenInfo) => void) => Unsubscribe;
   };
 }

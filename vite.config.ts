@@ -5,6 +5,15 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      input: {
+        main: path.join(__dirname, 'index.html'),
+        orb: path.join(__dirname, 'orb.html'),
+        lock: path.join(__dirname, 'lock.html'),
+      },
+    },
+  },
   plugins: [
     react(),
     electron({
@@ -14,12 +23,14 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-external: [
+              external: [
                 '@aws-sdk/client-s3',
                 '@libsql/client',
                 'dotenv',
                 'drizzle-orm',
                 'drizzle-orm/libsql',
+                'active-win',
+                '@google/generative-ai',
               ],
             },
           },

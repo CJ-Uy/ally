@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "./App.css";
+import { SessionPanel } from "./session/SessionPanel";
 
 type R2Object = { key: string; size: number; etag?: string };
 
@@ -87,6 +88,8 @@ function App() {
         </section>
 
         <div className="panel-grid">
+          <SessionPanel />
+
           <section className="panel">
             <h3>Health Checks</h3>
             <div className="app__actions">
