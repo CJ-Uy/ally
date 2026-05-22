@@ -1,10 +1,12 @@
 import "dotenv/config";
 import electron from "electron";
-const { app, BrowserWindow, ipcMain } = electron as typeof import("electron");
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { db } from "./db";
 import { r2 } from "./r2";
+
+const { app, BrowserWindow, ipcMain, shell } =
+  electron as typeof import("electron");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,6 +32,53 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: Electron.BrowserWindow | null;
 
+function isAllowedNavigation(url: string) {
+  try {
+    if (VITE_DEV_SERVER_URL) {
+      return new URL(url).origin === new URL(VITE_DEV_SERVER_URL).origin;
+    }
+
+    if (new URL(url).protocol !== "file:") {
+      return false;
+    }
+
+    const relativePath = path.relative(RENDERER_DIST, fileURLToPath(url));
+    return (
+      relativePath === "" ||
+      (relativePath !== ".." &&
+        !relativePath.startsWith(`..${path.sep}`) &&
+        !path.isAbsolute(relativePath))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isSafeExternalUrl(url: string) {
+  try {
+    const protocol = new URL(url).protocol;
+    return protocol === "https:" || protocol === "mailto:";
+  } catch {
+    return false;
+  }
+}
+
+function toOptionalPrefix(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error("R2 prefix must be a string");
+  }
+
+  if (value.length > 512) {
+    throw new Error("R2 prefix is too long");
+  }
+
+  return value;
+}
+
 function createWindow() {
   win = new BrowserWindow({
     title: "Ally Desktop",
@@ -47,9 +96,31 @@ function createWindow() {
     },
   });
 
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isSafeExternalUrl(url)) {
+      void shell.openExternal(url);
+    }
+
+    return { action: "deny" };
+  });
+
+  win.webContents.on("will-navigate", (event, url) => {
+    if (!isAllowedNavigation(url)) {
+      event.preventDefault();
+
+      if (isSafeExternalUrl(url)) {
+        void shell.openExternal(url);
+      }
+    }
+  });
+
   win.once("ready-to-show", () => {
     win?.show();
     win?.focus();
+  });
+
+  win.on("closed", () => {
+    win = null;
   });
 
   if (VITE_DEV_SERVER_URL) {
@@ -89,7 +160,18 @@ ipcMain.handle("db:health", async () => {
 
 ipcMain.handle(
   "r2:list",
-  async (_event: Electron.IpcMainInvokeEvent, prefix?: string) => {
-    return r2.list({ prefix, limit: 25 });
+  async (_event: Electron.IpcMainInvokeEvent, prefix?: unknown) => {
+    const result = await r2.list({
+      prefix: toOptionalPrefix(prefix),
+      limit: 25,
+    });
+
+    return {
+      ...result,
+      objects: result.objects.map((object) => ({
+        ...object,
+        uploaded: object.uploaded?.toISOString(),
+      })),
+    };
   },
 );

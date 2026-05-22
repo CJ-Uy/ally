@@ -27,7 +27,12 @@ interface Window {
     ping: () => Promise<string>;
     dbHealth: () => Promise<{ ok: boolean }>;
     r2List: (prefix?: string) => Promise<{
-      objects: Array<{ key: string; size: number; etag?: string }>;
+      objects: Array<{
+        key: string;
+        size: number;
+        etag?: string;
+        uploaded?: string;
+      }>;
       truncated: boolean;
       cursor?: string;
       delimitedPrefixes: string[];
