@@ -1,47 +1,30 @@
-# OpenNext Starter
+# Ally Desktop
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-Read the documentation at https://opennext.js.org/cloudflare.
+Electron + Vite + React desktop app wired to Turso (via Drizzle) and R2 (via S3).
 
 ## Develop
 
-Run the Next.js development server:
-
 ```bash
-npm run dev
-# or similar package manager command
+pnpm install
+pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env` file in the project root with:
 
-## Preview
+```
+TURSO_DATABASE_URL=your_turso_url
+TURSO_AUTH_TOKEN=your_turso_token
 
-Preview the application locally on the Cloudflare runtime:
-
-```bash
-npm run preview
-# or similar package manager command
+CLOUDFLARE_R2_BUCKET_NAME=your_bucket_name
+CLOUDFLARE_R2_ACCESS_KEY_ID=your_access_key_id
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=your_secret_access_key
+CLOUDFLARE_R2_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
 ```
 
-## Deploy
-
-Deploy the application to Cloudflare:
+## Drizzle migrations
 
 ```bash
-npm run deploy
-# or similar package manager command
+pnpm drizzle-kit generate
 ```
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
