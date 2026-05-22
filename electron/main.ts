@@ -2,7 +2,6 @@ import "dotenv/config";
 import { app, BrowserWindow, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { sql } from "drizzle-orm";
 import { db } from "./db";
 import { r2 } from "./r2";
 
@@ -28,7 +27,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, "public")
   : RENDERER_DIST;
 
-let win: BrowserWindow | null;
+let win: Electron.BrowserWindow | null;
 
 function createWindow() {
   win = new BrowserWindow({
@@ -71,10 +70,13 @@ app.whenReady().then(createWindow);
 ipcMain.handle("app:ping", async () => "pong");
 
 ipcMain.handle("db:health", async () => {
-  await db.execute(sql`select 1`);
+  await db.$client.execute("select 1");
   return { ok: true };
 });
 
-ipcMain.handle("r2:list", async (_event, prefix?: string) => {
-  return r2.list({ prefix, limit: 25 });
-});
+ipcMain.handle(
+  "r2:list",
+  async (_event: Electron.IpcMainInvokeEvent, prefix?: string) => {
+    return r2.list({ prefix, limit: 25 });
+  },
+);

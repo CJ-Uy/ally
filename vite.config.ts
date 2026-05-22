@@ -11,6 +11,19 @@ export default defineConfig({
       main: {
         // Shortcut of `build.lib.entry`.
         entry: 'electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: [
+                '@aws-sdk/client-s3',
+                '@libsql/client',
+                'dotenv',
+                'drizzle-orm',
+                'drizzle-orm/libsql',
+              ],
+            },
+          },
+        },
       },
       preload: {
         // Shortcut of `build.rollupOptions.input`.

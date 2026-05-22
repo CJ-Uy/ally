@@ -4,6 +4,12 @@ Electron + Vite + React desktop app wired to Turso (via Drizzle) and R2 (via S3)
 
 ## Develop
 
+On Ubuntu/Debian, install Electron's native runtime dependencies first:
+
+```bash
+sudo apt-get install -y libnspr4 libnss3
+```
+
 ```bash
 pnpm install
 pnpm dev

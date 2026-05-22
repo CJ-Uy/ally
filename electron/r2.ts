@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
+  type PutObjectCommandInput,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
@@ -41,6 +42,8 @@ type R2ClientState = {
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
+
+type R2PutBody = string | Uint8Array | ArrayBuffer | Blob | Readable;
 
 function getR2Config(): R2Config {
   const accessKeyId = process.env.CLOUDFLARE_R2_ACCESS_KEY_ID;
@@ -89,19 +92,21 @@ async function readableToArrayBuffer(stream: Readable): Promise<ArrayBuffer> {
   }
 
   const buffer = Buffer.concat(chunks);
-  return buffer.buffer.slice(
-    buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength,
-  );
+  return bufferToArrayBuffer(buffer);
+}
+
+function bufferToArrayBuffer(buffer: Uint8Array): ArrayBuffer {
+  const arrayBuffer = new ArrayBuffer(buffer.byteLength);
+  new Uint8Array(arrayBuffer).set(buffer);
+  return arrayBuffer;
 }
 
 async function toArrayBuffer(body: unknown): Promise<ArrayBuffer> {
   if (!body) return new ArrayBuffer(0);
   if (body instanceof ArrayBuffer) return body;
   if (ArrayBuffer.isView(body)) {
-    return body.buffer.slice(
-      body.byteOffset,
-      body.byteOffset + body.byteLength,
+    return bufferToArrayBuffer(
+      new Uint8Array(body.buffer, body.byteOffset, body.byteLength),
     );
   }
   if (typeof body === "string") return textEncoder.encode(body).buffer;
@@ -114,6 +119,15 @@ async function toArrayBuffer(body: unknown): Promise<ArrayBuffer> {
   }
 
   throw new Error("Unsupported R2 body type from S3 client");
+}
+
+function toPutBody(value: R2PutBody): PutObjectCommandInput["Body"] {
+  if (value instanceof ArrayBuffer) return new Uint8Array(value);
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+
+  return value;
 }
 
 export const r2 = {
@@ -138,7 +152,7 @@ export const r2 = {
 
   async put(
     key: string,
-    value: BodyInit | ArrayBuffer | Uint8Array,
+    value: R2PutBody,
     contentType?: string,
   ) {
     const { client, bucketName } = getClientState();
@@ -146,7 +160,7 @@ export const r2 = {
       new PutObjectCommand({
         Bucket: bucketName,
         Key: key,
-        Body: value as unknown as BodyInit,
+        Body: toPutBody(value),
         ContentType: contentType,
       }),
     );
