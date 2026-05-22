@@ -14,7 +14,7 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: [
+external: [
                 '@aws-sdk/client-s3',
                 '@libsql/client',
                 'dotenv',
