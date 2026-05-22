@@ -1,4 +1,5 @@
-import { ipcRenderer, contextBridge } from "electron";
+import electron from "electron";
+const { ipcRenderer, contextBridge } = electron as typeof import("electron");
 
 contextBridge.exposeInMainWorld("api", {
   ping: () => ipcRenderer.invoke("app:ping") as Promise<string>,

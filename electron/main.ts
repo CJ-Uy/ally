@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { app, BrowserWindow, ipcMain } from "electron";
+import electron from "electron";
+const { app, BrowserWindow, ipcMain } = electron as typeof import("electron");
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { db } from "./db";
