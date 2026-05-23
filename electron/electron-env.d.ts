@@ -91,6 +91,8 @@ interface TaskDto {
   title: string;
   description: string | null;
   dueDate: string | null;
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
   estimatedMinutes: number | null;
   status: "todo" | "in_progress" | "done";
   parentTaskId: number | null;
@@ -240,6 +242,8 @@ interface Window {
       title: string;
       description?: string;
       dueDate?: string | null;
+      scheduledStart?: string | null;
+      scheduledEnd?: string | null;
       estimatedMinutes?: number | null;
     }) => Promise<TaskDto>;
     tasksUpdate: (
@@ -248,6 +252,8 @@ interface Window {
         title?: string;
         description?: string | null;
         dueDate?: string | null;
+        scheduledStart?: string | null;
+        scheduledEnd?: string | null;
         estimatedMinutes?: number | null;
         status?: TaskDto["status"];
       },

@@ -10,6 +10,8 @@ export interface Task {
   title: string;
   description: string | null;
   dueDate: Date | null;
+  scheduledStart: Date | null;
+  scheduledEnd: Date | null;
   estimatedMinutes: number | null;
   status: TaskStatus;
   parentTaskId: number | null;
@@ -22,6 +24,8 @@ export interface TaskInsert {
   title: string;
   description?: string | null;
   dueDate?: Date | null;
+  scheduledStart?: Date | null;
+  scheduledEnd?: Date | null;
   estimatedMinutes?: number | null;
   status?: TaskStatus;
   parentTaskId?: number | null;
@@ -32,6 +36,8 @@ export interface TaskPatch {
   title?: string;
   description?: string | null;
   dueDate?: Date | null;
+  scheduledStart?: Date | null;
+  scheduledEnd?: Date | null;
   estimatedMinutes?: number | null;
   status?: TaskStatus;
   subjectId?: number;
@@ -86,6 +92,8 @@ export async function createTask(input: TaskInsert): Promise<Task> {
       title: input.title,
       description: input.description ?? null,
       dueDate: input.dueDate ?? null,
+      scheduledStart: input.scheduledStart ?? null,
+      scheduledEnd: input.scheduledEnd ?? null,
       estimatedMinutes: input.estimatedMinutes ?? null,
       status: input.status ?? "todo",
       parentTaskId: input.parentTaskId ?? null,

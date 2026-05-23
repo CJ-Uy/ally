@@ -55,6 +55,8 @@ export const tasks = sqliteTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   dueDate: integer("due_date", { mode: "timestamp_ms" }),
+  scheduledStart: integer("scheduled_start", { mode: "timestamp_ms" }),
+  scheduledEnd: integer("scheduled_end", { mode: "timestamp_ms" }),
   estimatedMinutes: integer("estimated_minutes"),
   status: text("status").notNull().default("todo"),
   parentTaskId: integer("parent_task_id"),

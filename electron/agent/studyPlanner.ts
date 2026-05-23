@@ -130,6 +130,39 @@ SMART BEHAVIOR TOOLS
 - "Reschedule my week" → check_at_risk first → propose inline → propose_reschedule once the user confirms. Tasks only, never events.
 
 ═══════════════════════════════════════════════════════════
+TIME-BLOCKING — scheduling tasks at specific hours
+═══════════════════════════════════════════════════════════
+
+Tasks can carry a scheduled time block (scheduledStart + scheduledEnd) IN ADDITION to a due date. A task can be:
+- date-only (current default — has dueDate, no time block)
+- time-blocked (has scheduledStart/scheduledEnd — appears on the calendar at that exact hour)
+- both (deadline + when the user plans to do it)
+
+Use time-blocking when the user asks to:
+- "time block my study", "plan my study session", "schedule my afternoon"
+- prep for an exam ("time block my study for the calc exam tomorrow")
+- adjust an existing block ("extend my break", "push the next study session back 30 min", "I'm not feeling well")
+
+Tools for time-blocking:
+- schedule_task(taskId, start, end) — pin an existing task to a specific time slot. Use this to ADD a time to a date-only task.
+- unschedule_task(taskId) — strip the time block but keep the task (and dueDate).
+- create_task with scheduledStart/scheduledEnd — make a NEW time-blocked task in one step.
+
+When BUILDING a study time-block plan:
+1. Read the LIVE USER STATE for the user's existing tasks, events, and any already-scheduled blocks today/tomorrow.
+2. Respect existing classes/exams/deadlines on the calendar — never schedule on top of them.
+3. Break study time into ~45-90 min focused blocks with 10-20 min breaks between them.
+4. Each block is a SEPARATE task — title like "[Calc Study] Review derivatives", "[Break] 15 min" etc.
+5. Use create_task with scheduledStart/scheduledEnd to lay them down. The break-task is OK — it's just a task with title "Break".
+6. After laying them down, summarize the schedule in one sentence ("Laid down 4 blocks 7:00pm-10:15pm: 3×45m study + 2×15m breaks.").
+
+When ADJUSTING an existing schedule ("extend my break", "I need a longer break"):
+1. Identify the relevant block from the snapshot (the one currently happening or next).
+2. Use schedule_task with new start/end times to move it.
+3. Cascade-shift subsequent blocks if needed (call schedule_task multiple times).
+4. Confirm in plain English what shifted ("Pushed your break to 8:00-8:30, and slid the next study block to 8:30-9:30.").
+
+═══════════════════════════════════════════════════════════
 OUTPUT FORMAT
 ═══════════════════════════════════════════════════════════
 
@@ -195,7 +228,8 @@ const tools: FunctionDeclaration[] = [
   },
   {
     name: "create_task",
-    description: "Create a new task for a subject.",
+    description:
+      "Create a new task for a subject. Pass scheduledStart/scheduledEnd to create the task already time-blocked on the calendar.",
     parameters: {
       type: SchemaType.OBJECT,
       properties: {
@@ -204,6 +238,14 @@ const tools: FunctionDeclaration[] = [
         dueDate: {
           type: SchemaType.STRING,
           description: "ISO 8601 date or datetime, e.g. 2026-05-30 or 2026-05-30T15:00",
+        },
+        scheduledStart: {
+          type: SchemaType.STRING,
+          description: "ISO 8601 datetime when the user will WORK on this task. Use for time-blocked study sessions, breaks, etc.",
+        },
+        scheduledEnd: {
+          type: SchemaType.STRING,
+          description: "ISO 8601 datetime when the work-block ends. Must come after scheduledStart.",
         },
         estimatedMinutes: { type: SchemaType.NUMBER },
         description: { type: SchemaType.STRING },
@@ -220,6 +262,8 @@ const tools: FunctionDeclaration[] = [
         id: { type: SchemaType.NUMBER },
         title: { type: SchemaType.STRING },
         dueDate: { type: SchemaType.STRING },
+        scheduledStart: { type: SchemaType.STRING },
+        scheduledEnd: { type: SchemaType.STRING },
         estimatedMinutes: { type: SchemaType.NUMBER },
         description: { type: SchemaType.STRING },
         status: {
@@ -228,6 +272,38 @@ const tools: FunctionDeclaration[] = [
         },
       },
       required: ["id"],
+    },
+  },
+  {
+    name: "schedule_task",
+    description:
+      "Pin an existing task to a specific time slot (scheduledStart + scheduledEnd). Use this to ADD a time block to a date-only task, or to MOVE an existing block.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        taskId: { type: SchemaType.NUMBER },
+        start: {
+          type: SchemaType.STRING,
+          description: "ISO 8601 datetime for the block start.",
+        },
+        end: {
+          type: SchemaType.STRING,
+          description: "ISO 8601 datetime for the block end. Must be after start.",
+        },
+      },
+      required: ["taskId", "start", "end"],
+    },
+  },
+  {
+    name: "unschedule_task",
+    description:
+      "Strip the time block (scheduledStart/scheduledEnd) from a task while keeping the task itself. Use when the user wants to remove a block but keep the work on their list.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        taskId: { type: SchemaType.NUMBER },
+      },
+      required: ["taskId"],
     },
   },
   {
@@ -449,6 +525,8 @@ function compactTask(t: Task, subjectName: string) {
     subject: subjectName,
     title: t.title,
     dueDate: t.dueDate ? t.dueDate.toISOString() : null,
+    scheduledStart: t.scheduledStart ? t.scheduledStart.toISOString() : null,
+    scheduledEnd: t.scheduledEnd ? t.scheduledEnd.toISOString() : null,
     estimatedMinutes: t.estimatedMinutes,
     status: t.status,
   };
@@ -502,11 +580,18 @@ async function runTool(name: string, args: ToolArgs): Promise<unknown> {
       const title = asString(args.title);
       if (!subjectName || !title) return { error: "subjectName and title are required" };
       const subj = await ensureSubject(subjectName);
+      const schedStart = parseDate(args.scheduledStart) ?? null;
+      const schedEnd = parseDate(args.scheduledEnd) ?? null;
+      if (schedStart && schedEnd && schedEnd <= schedStart) {
+        return { error: "scheduledEnd must be after scheduledStart" };
+      }
       const task = await createTask({
         subjectId: subj.id,
         title,
         description: asString(args.description) ?? null,
         dueDate: parseDate(args.dueDate) ?? null,
+        scheduledStart: schedStart,
+        scheduledEnd: schedEnd,
         estimatedMinutes: asNumber(args.estimatedMinutes) ?? null,
         createdBy: "ai",
       });
@@ -524,12 +609,46 @@ async function runTool(name: string, args: ToolArgs): Promise<unknown> {
       if (description !== undefined) patch.description = description;
       const due = parseDate(args.dueDate);
       if (due) patch.dueDate = due;
+      const schedStart = parseDate(args.scheduledStart);
+      if (schedStart) patch.scheduledStart = schedStart;
+      const schedEnd = parseDate(args.scheduledEnd);
+      if (schedEnd) patch.scheduledEnd = schedEnd;
       const est = asNumber(args.estimatedMinutes);
       if (est !== undefined) patch.estimatedMinutes = est;
       const status = asString(args.status) as TaskStatus | undefined;
       if (status) patch.status = status;
       const updated = await updateTask(id, patch);
       if (!updated) return { error: `task ${id} not found after update` };
+      const subj = await getSubject(updated.subjectId);
+      return compactTask(updated, subj?.name ?? "Unknown");
+    }
+    case "schedule_task": {
+      const taskId = asNumber(args.taskId);
+      const start = parseDate(args.start);
+      const end = parseDate(args.end);
+      if (taskId === undefined) return { error: "taskId is required" };
+      if (!start || !end) return { error: "start and end are required ISO datetimes" };
+      if (end <= start) return { error: "end must be after start" };
+      const existing = await getTask(taskId);
+      if (!existing) return { error: `task ${taskId} not found` };
+      const updated = await updateTask(taskId, {
+        scheduledStart: start,
+        scheduledEnd: end,
+      });
+      if (!updated) return { error: `task ${taskId} not found after update` };
+      const subj = await getSubject(updated.subjectId);
+      return compactTask(updated, subj?.name ?? "Unknown");
+    }
+    case "unschedule_task": {
+      const taskId = asNumber(args.taskId);
+      if (taskId === undefined) return { error: "taskId is required" };
+      const existing = await getTask(taskId);
+      if (!existing) return { error: `task ${taskId} not found` };
+      const updated = await updateTask(taskId, {
+        scheduledStart: null,
+        scheduledEnd: null,
+      });
+      if (!updated) return { error: `task ${taskId} not found after update` };
       const subj = await getSubject(updated.subjectId);
       return compactTask(updated, subj?.name ?? "Unknown");
     }
@@ -832,8 +951,12 @@ async function formatLiveContext(): Promise<string> {
         const est = t.estimatedMinutes ? `, ~${t.estimatedMinutes}m` : "";
         const parent = t.parentTaskId ? `, parent ${t.parentTaskId}` : "";
         const status = t.status === "todo" ? "" : `, ${t.status}`;
+        const block =
+          t.scheduledStart && t.scheduledEnd
+            ? `, BLOCK ${t.scheduledStart.toISOString().slice(0, 16)}→${t.scheduledEnd.toISOString().slice(11, 16)}`
+            : "";
         lines.push(
-          `    - [id ${t.id}] "${t.title}" — ${subj}, due ${due}${est}${parent}${status}`,
+          `    - [id ${t.id}] "${t.title}" — ${subj}, due ${due}${block}${est}${parent}${status}`,
         );
       }
       if (open.length > TASK_CAP) {

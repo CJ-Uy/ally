@@ -11,6 +11,22 @@ function fmtDate(iso: string | null) {
   });
 }
 
+function fmtTimeBlock(startIso: string | null, endIso: string | null) {
+  if (!startIso) return null;
+  const start = new Date(startIso);
+  const end = endIso ? new Date(endIso) : null;
+  const t = (d: Date) =>
+    d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const sameDate = end && start.toDateString() === end.toDateString();
+  const datePart = start.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+  });
+  if (!end) return `${datePart} ${t(start)}`;
+  if (sameDate) return `${datePart} ${t(start)} – ${t(end)}`;
+  return `${datePart} ${t(start)} → ${end.toLocaleDateString([], { month: "short", day: "numeric" })} ${t(end)}`;
+}
+
 function toInputDate(iso: string | null) {
   if (!iso) return "";
   const d = new Date(iso);
@@ -193,7 +209,15 @@ export function TasksPage() {
             )}
             {t.createdBy === "ai" && <span className="sticker sticker--sky tasks-row__ai">AI</span>}
             {t.estimatedMinutes && <span>~{t.estimatedMinutes}m</span>}
-            {t.dueDate && <span>{fmtDate(t.dueDate)}</span>}
+            {t.scheduledStart && (
+              <span className="tasks-row__timeblock" title="Time-blocked">
+                ◷ {fmtTimeBlock(t.scheduledStart, t.scheduledEnd)}
+              </span>
+            )}
+            {t.dueDate && !t.scheduledStart && <span>{fmtDate(t.dueDate)}</span>}
+            {t.dueDate && t.scheduledStart && (
+              <span className="tasks-row__due-soft">due {fmtDate(t.dueDate)}</span>
+            )}
           </span>
         </div>
         <div className="tasks-row__actions">

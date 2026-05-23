@@ -2478,6 +2478,19 @@
   font-size: 10px !important;
   padding: 1px 5px !important;
 }
+.tasks-row__timeblock {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(74, 111, 165, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.tasks-row__due-soft {
+  opacity: 0.6;
+  font-size: 11px;
+}
 .tasks-row__actions {
   display: flex;
   gap: 4px;
@@ -2556,6 +2569,213 @@
   padding: 2px 6px;
 }
 .cal-event--exam { font-weight: 600; }
+.cal-event__time {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  margin-right: 3px;
+  opacity: 0.85;
+}
+
+/* ────────────────────────────────────────────────────────────
+   Hour grid (Week / Day views)
+   ──────────────────────────────────────────────────────────── */
+.cal-hourgrid {
+  --gutter-w: 56px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.cal-hourgrid--day { --day-cols: 1; }
+.cal-hourgrid--week { --day-cols: 7; }
+
+.cal-hourgrid__head {
+  display: grid;
+  grid-template-columns: var(--gutter-w) repeat(var(--day-cols), minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.cal-hourgrid__head-corner {
+  border-right: 1px solid var(--line);
+}
+.cal-hourgrid__head-day {
+  padding: 8px 10px;
+  border-right: 1px solid var(--line);
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.cal-hourgrid__head-day:last-child {
+  border-right: none;
+}
+.cal-hourgrid__head-day--today {
+  background: rgba(245, 166, 107, 0.12);
+}
+.cal-hourgrid__head-weekday {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.cal-hourgrid__head-day--today .cal-hourgrid__head-weekday {
+  color: var(--fox);
+}
+.cal-hourgrid__head-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.cal-hourgrid__allday {
+  display: grid;
+  grid-template-columns: var(--gutter-w) repeat(var(--day-cols), minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  min-height: 32px;
+  flex-shrink: 0;
+}
+.cal-hourgrid__allday-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 6px 8px;
+  border-right: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.cal-hourgrid__allday-col {
+  padding: 4px 6px;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 28px;
+}
+.cal-hourgrid__allday-col:last-child {
+  border-right: none;
+}
+
+.cal-hourgrid__body {
+  display: grid;
+  grid-template-columns: var(--gutter-w) repeat(var(--day-cols), minmax(0, 1fr));
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  position: relative;
+}
+
+.cal-hourgrid__gutter {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+}
+.cal-hourgrid__hour-label {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 2px 8px 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  border-top: 1px dashed transparent;
+}
+.cal-hourgrid__hour-label:first-child {
+  color: transparent; /* hide the 6 AM label at the very top to avoid clipping */
+}
+
+.cal-hourgrid__col {
+  position: relative;
+  border-right: 1px solid var(--line);
+}
+.cal-hourgrid__col:last-child {
+  border-right: none;
+}
+.cal-hourgrid__col--today {
+  background: rgba(245, 166, 107, 0.04);
+}
+.cal-hourgrid__row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+  pointer-events: none;
+}
+.cal-hourgrid__row:nth-child(even) {
+  border-top-style: dashed;
+  opacity: 0.5;
+}
+
+.cal-hourgrid__now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--fox);
+  z-index: 5;
+  box-shadow: 0 0 0 1px rgba(245, 166, 107, 0.25);
+  pointer-events: none;
+}
+.cal-hourgrid__now::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fox);
+}
+
+.cal-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.25;
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(30, 42, 61, 0.08);
+  border: 1px solid rgba(30, 42, 61, 0.08);
+  z-index: 2;
+  cursor: default;
+}
+.cal-block--exam { font-weight: 600; }
+.cal-block--point {
+  padding: 2px 6px;
+}
+.cal-block__time {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-bottom: 1px;
+}
+.cal-block__title {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-block--point .cal-block__time {
+  display: inline;
+  margin-right: 4px;
+}
+.cal-block--point .cal-block__title {
+  display: inline;
+}
 
 /* ────────────────────────────────────────────────────────────
    Planner chat panel

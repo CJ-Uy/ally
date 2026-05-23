@@ -35,6 +35,8 @@ const STATEMENTS = [
      title TEXT NOT NULL,
      description TEXT,
      due_date INTEGER,
+     scheduled_start INTEGER,
+     scheduled_end INTEGER,
      estimated_minutes INTEGER,
      status TEXT NOT NULL DEFAULT 'todo',
      parent_task_id INTEGER,
@@ -65,6 +67,8 @@ const ALTERS = [
   "ALTER TABLE user_profile ADD COLUMN notify_streak_danger INTEGER NOT NULL DEFAULT 1",
   "ALTER TABLE user_profile ADD COLUMN notify_chat_response INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE subjects ADD COLUMN familiarity TEXT",
+  "ALTER TABLE tasks ADD COLUMN scheduled_start INTEGER",
+  "ALTER TABLE tasks ADD COLUMN scheduled_end INTEGER",
 ];
 
 let bootstrapped = false;

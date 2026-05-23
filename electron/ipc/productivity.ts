@@ -395,6 +395,8 @@ export function registerProductivityIpc() {
         title: string;
         description?: string;
         dueDate?: string | null;
+        scheduledStart?: string | null;
+        scheduledEnd?: string | null;
         estimatedMinutes?: number | null;
       },
     ) => {
@@ -403,6 +405,8 @@ export function registerProductivityIpc() {
         title: payload.title,
         description: payload.description ?? null,
         dueDate: dateOrNull(payload.dueDate),
+        scheduledStart: dateOrNull(payload.scheduledStart),
+        scheduledEnd: dateOrNull(payload.scheduledEnd),
         estimatedMinutes: payload.estimatedMinutes ?? null,
         createdBy: "user",
       });
@@ -420,6 +424,8 @@ export function registerProductivityIpc() {
           title?: string;
           description?: string | null;
           dueDate?: string | null;
+          scheduledStart?: string | null;
+          scheduledEnd?: string | null;
           estimatedMinutes?: number | null;
           status?: TaskStatus;
         };
@@ -431,6 +437,10 @@ export function registerProductivityIpc() {
         patch.description = payload.patch.description;
       if (payload.patch.dueDate !== undefined)
         patch.dueDate = dateOrNull(payload.patch.dueDate);
+      if (payload.patch.scheduledStart !== undefined)
+        patch.scheduledStart = dateOrNull(payload.patch.scheduledStart);
+      if (payload.patch.scheduledEnd !== undefined)
+        patch.scheduledEnd = dateOrNull(payload.patch.scheduledEnd);
       if (payload.patch.estimatedMinutes !== undefined)
         patch.estimatedMinutes = payload.patch.estimatedMinutes;
       if (payload.patch.status !== undefined) patch.status = payload.patch.status;
@@ -576,6 +586,8 @@ function serializeTask(row: {
   title: string;
   description: string | null;
   dueDate: Date | null;
+  scheduledStart: Date | null;
+  scheduledEnd: Date | null;
   estimatedMinutes: number | null;
   status: string;
   parentTaskId: number | null;
@@ -588,6 +600,8 @@ function serializeTask(row: {
     title: row.title,
     description: row.description,
     dueDate: row.dueDate ? row.dueDate.toISOString() : null,
+    scheduledStart: row.scheduledStart ? row.scheduledStart.toISOString() : null,
+    scheduledEnd: row.scheduledEnd ? row.scheduledEnd.toISOString() : null,
     estimatedMinutes: row.estimatedMinutes,
     status: row.status,
     parentTaskId: row.parentTaskId,
