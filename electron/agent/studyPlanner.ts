@@ -1,4 +1,5 @@
 import {
+  FunctionCallingMode,
   GoogleGenerativeAI,
   SchemaType,
   type FunctionDeclaration,
@@ -36,18 +37,24 @@ export const studyPlannerAgent = {
     "An AI agent that helps the user manage their study plan — creating, updating, and organizing tasks and calendar events through conversation.",
   instructions: `You are Study Planner, the user's study assistant. You manage their academic tasks and calendar.
 
+CRITICAL: ALWAYS reply with a visible message to the user. Never return an empty response. If you do nothing else, at least acknowledge the user's message in one sentence.
+
 Tone: warm, concise, and direct. No filler. Confirm destructive actions (delete, bulk update) in one short sentence before executing.
 
-Grounding: always use the tool outputs as your source of truth. Never invent task IDs, event IDs, subject names, or dates. If you are unsure which item the user means, call list_tasks or list_events first.
+A LIVE USER STATE snapshot is provided in the system context at the start of every turn — use it as your primary source of truth. You do NOT need to call list_subjects / list_tasks / list_events for read-only queries; the answer is already in the context. Only call tools when you need to mutate state (create, update, delete, mark done) or when the user explicitly asks for fresh data.
 
-When the user asks "what should I work on next?", consider deadlines (closer = higher priority), workload (estimated_minutes), and recent activity. Recommend ONE concrete task with a one-sentence reason.
+If the snapshot says "Subjects: none": the user has no subjects yet. Tell them so and offer to create one directly (call create_task with a new subjectName — the system will auto-create the subject) or suggest they add a syllabus.
+
+If subjects exist but tasks are empty: tell the user and offer to add one.
+
+When the user asks "what should I work on next?": use the snapshot's open task list. Recommend ONE concrete task by id, considering deadlines (closer = higher priority) and workload (estimated_minutes), with a one-sentence reason. If there are no open tasks, say so.
 
 When creating tasks or events:
-- Use the user's own subject names from list_subjects.
-- If the user gives a relative date ("tomorrow", "next Friday"), resolve it to a calendar date using the current date provided in the system context.
+- Use subject names exactly as shown in the snapshot when referring to existing subjects. Use a new name to create a new subject.
+- If the user gives a relative date ("tomorrow", "next Friday"), resolve it to a calendar date using the current date in the system context.
 - If estimated_minutes is missing for a new task, pick a sensible default based on task type (homework ≈ 45, reading ≈ 30, project chunk ≈ 90).
 
-After a successful tool call, summarize what you did in one short sentence ("Added 'Read chapter 4' to Calculus, due Friday."). Do not dump JSON at the user.
+After a successful tool call, confirm what you did in one short sentence ("Added 'Read chapter 4' to Calculus, due Friday."). Do not dump JSON at the user.
 
 If a tool call fails, tell the user what went wrong in plain English. Don't retry the same call without changing inputs.`,
   knowledge: {
@@ -431,52 +438,189 @@ export interface PlannerReply {
 
 const MAX_TOOL_ITERATIONS = 6;
 
+async function formatLiveContext(): Promise<string> {
+  try {
+    const [subjects, allTasks, allEvents, profile] = await Promise.all([
+      listSubjects(),
+      listTasks(),
+      listEvents(),
+      getProfile(),
+    ]);
+
+    const lines: string[] = ["LIVE USER STATE (snapshot at start of turn):"];
+
+    if (profile) {
+      lines.push(
+        `- Profile: ${profile.educationLevel} student, ${profile.studyHoursPerWeek} hrs/week target`,
+      );
+    } else {
+      lines.push("- Profile: not yet set (user hasn't completed onboarding)");
+    }
+
+    if (subjects.length === 0) {
+      lines.push("- Subjects: none");
+      lines.push(
+        "  → The user has NO subjects yet. Suggest they add one (use create_task with a new subjectName to auto-create the subject), or finish onboarding.",
+      );
+    } else {
+      lines.push(
+        `- Subjects (${subjects.length}): ${subjects.map((s) => `"${s.name}"`).join(", ")}`,
+      );
+    }
+
+    const open = allTasks.filter((t) => t.status !== "done");
+    const done = allTasks.length - open.length;
+    lines.push(`- Tasks: ${open.length} open, ${done} done`);
+
+    if (open.length > 0) {
+      const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+      const sorted = open
+        .slice()
+        .sort((a, b) => {
+          const ad = a.dueDate ? a.dueDate.getTime() : Infinity;
+          const bd = b.dueDate ? b.dueDate.getTime() : Infinity;
+          return ad - bd;
+        })
+        .slice(0, 10);
+      for (const t of sorted) {
+        const subj = subjectMap.get(t.subjectId) ?? "?";
+        const due = t.dueDate
+          ? t.dueDate.toISOString().slice(0, 10)
+          : "no date";
+        const est = t.estimatedMinutes ? `, ~${t.estimatedMinutes}m` : "";
+        lines.push(`  - [id ${t.id}] "${t.title}" — ${subj}, due ${due}${est}`);
+      }
+      if (open.length > 10) lines.push(`  …and ${open.length - 10} more`);
+    }
+
+    const upcomingEvents = allEvents
+      .filter((e) => e.startsAt >= new Date())
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      .slice(0, 5);
+    if (upcomingEvents.length > 0) {
+      const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+      lines.push(`- Upcoming events (${upcomingEvents.length}):`);
+      for (const e of upcomingEvents) {
+        const subj = subjectMap.get(e.subjectId) ?? "?";
+        lines.push(
+          `  - [id ${e.id}] "${e.title}" (${e.type}) — ${subj}, ${e.startsAt.toISOString().slice(0, 16)}`,
+        );
+      }
+    } else {
+      lines.push("- Upcoming events: none");
+    }
+
+    return lines.join("\n");
+  } catch (err) {
+    console.warn("[planner] failed to fetch live context:", err);
+    return "LIVE USER STATE: unavailable (database error). Proceed using tools.";
+  }
+}
+
 export async function sendToPlanner(
   history: ChatMessage[],
   userMessage: string,
 ): Promise<PlannerReply> {
-  try {
-    const today = new Date().toISOString();
-    const systemInstruction = `${studyPlannerAgent.instructions}\n\nCurrent date/time (ISO): ${today}`;
+  const today = new Date().toISOString();
+  const contextBlock = await formatLiveContext();
+  console.log(`[planner] context:\n${contextBlock}`);
+  const systemInstruction = `${studyPlannerAgent.instructions}\n\n${contextBlock}\n\nCurrent date/time (ISO): ${today}`;
 
-    const model = getClient().getGenerativeModel({
-      model: PLANNER_MODEL,
-      systemInstruction,
-      tools: [{ functionDeclarations: tools }],
-    });
+  console.log(`[planner] → user: ${userMessage.slice(0, 100)}`);
+  console.log(`[planner] history length: ${history.length}`);
 
-    const chat = model.startChat({
-      history: history.map((m) => ({
-        role: m.role,
-        parts: [{ text: m.text }],
-      })),
-    });
+  const model = getClient().getGenerativeModel({
+    model: PLANNER_MODEL,
+    systemInstruction,
+    tools: [{ functionDeclarations: tools }],
+    toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } },
+  });
 
-    let response = await chat.sendMessage(userMessage);
+  const chat = model.startChat({
+    history: history.map((m) => ({
+      role: m.role,
+      parts: [{ text: m.text }],
+    })),
+  });
 
-    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-      const calls = response.response.functionCalls();
-      if (!calls || calls.length === 0) break;
+  const SEND_OPTS = { timeout: 30_000 };
 
-      const responses = [] as Array<{
-        functionResponse: { name: string; response: Record<string, unknown> };
-      }>;
-      for (const call of calls) {
+  console.log(`[planner] sending first message…`);
+  let response = await chat.sendMessage(userMessage, SEND_OPTS);
+  console.log(`[planner] first response received`);
+
+  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    const calls = response.response.functionCalls();
+    if (!calls || calls.length === 0) {
+      console.log(`[planner] no more tool calls after iteration ${i}`);
+      break;
+    }
+    console.log(
+      `[planner] iter ${i}: ${calls.length} tool call(s) → ${calls.map((c) => c.name).join(", ")}`,
+    );
+
+    const responses = [] as Array<{
+      functionResponse: { name: string; response: Record<string, unknown> };
+    }>;
+    for (const call of calls) {
+      try {
         const result = await runTool(call.name, (call.args ?? {}) as ToolArgs);
+        console.log(
+          `[planner] tool ${call.name} →`,
+          JSON.stringify(result).slice(0, 200),
+        );
         responses.push({
           functionResponse: {
             name: call.name,
             response: { result },
           },
         });
+      } catch (toolErr) {
+        console.error(`[planner] tool ${call.name} threw:`, toolErr);
+        responses.push({
+          functionResponse: {
+            name: call.name,
+            response: {
+              result: {
+                error:
+                  toolErr instanceof Error ? toolErr.message : String(toolErr),
+              },
+            },
+          },
+        });
       }
-      response = await chat.sendMessage(responses);
     }
-
-    const text = response.response.text();
-    return { visibleText: text.trim() || "…" };
-  } catch (err) {
-    console.error("[planner] error:", err);
-    return { visibleText: "Planner unavailable, try again." };
+    console.log(`[planner] sending tool responses…`);
+    response = await chat.sendMessage(responses, SEND_OPTS);
+    console.log(`[planner] tool response received`);
   }
+
+  const text = response.response.text();
+  console.log(`[planner] ← model: ${text.slice(0, 200)}`);
+
+  if (!text.trim()) {
+    const candidate = response.response.candidates?.[0];
+    const finishReason = candidate?.finishReason ?? "UNKNOWN";
+    const safetyRatings = candidate?.safetyRatings ?? [];
+    const parts = candidate?.content?.parts ?? [];
+    console.warn(
+      `[planner] empty text response. finishReason=${finishReason} parts=${JSON.stringify(parts).slice(0, 300)} safety=${JSON.stringify(safetyRatings).slice(0, 200)}`,
+    );
+
+    if (finishReason === "SAFETY" || finishReason === "RECITATION") {
+      return {
+        visibleText: `Gemini blocked the response (${finishReason}). Try rephrasing.`,
+      };
+    }
+    if (finishReason === "MAX_TOKENS") {
+      return {
+        visibleText: `Gemini ran out of tokens before finishing. Try a shorter request.`,
+      };
+    }
+    return {
+      visibleText: `Gemini returned an empty response (finishReason: ${finishReason}). Check the Electron main-process console for full details.`,
+    };
+  }
+
+  return { visibleText: text.trim() };
 }

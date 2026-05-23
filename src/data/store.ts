@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Listener = () => void;
 
@@ -6,7 +6,9 @@ class Bus {
   private listeners = new Set<Listener>();
   subscribe(fn: Listener) {
     this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
   }
   notify() {
     for (const l of this.listeners) l();
@@ -15,31 +17,46 @@ class Bus {
 
 export const dataBus = new Bus();
 
-function useReload<T>(loader: () => Promise<T>, initial: T): [T, () => void, boolean] {
+interface ReloadResult<T> {
+  value: T;
+  reload: () => Promise<void>;
+  loading: boolean;
+  error: Error | null;
+}
+
+function useReload<T>(loader: () => Promise<T>, initial: T): [
+  T,
+  () => Promise<void>,
+  ReloadResult<T>,
+] {
   const [value, setValue] = useState<T>(initial);
-  const [loading, setLoading] = useState(false);
-  const reload = useCallback(() => {
-    let cancelled = false;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const loaderRef = useRef(loader);
+  loaderRef.current = loader;
+
+  const reload = useCallback(async () => {
     setLoading(true);
-    loader()
-      .then((v) => {
-        if (!cancelled) setValue(v);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [loader]);
+    setError(null);
+    try {
+      const v = await loaderRef.current();
+      setValue(v);
+    } catch (err) {
+      console.error("[useReload] failed:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    reload();
-    const unsub = dataBus.subscribe(() => reload());
-    return () => {
-      unsub();
-    };
+    void reload();
+    return dataBus.subscribe(() => {
+      void reload();
+    });
   }, [reload]);
-  return [value, reload, loading];
+
+  return [value, reload, { value, reload, loading, error }];
 }
 
 export function useProfile() {

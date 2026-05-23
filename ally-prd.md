@@ -6,6 +6,56 @@ A desktop study companion that helps the user plan, track, and stay focused on t
 
 Built for the KPMG Academic Innovation Challenge 2026 (AI agents track). The locking + AI negotiation orb is already implemented and is the "execution" half of the app. This PRD covers the **planning + AI assistance half** — onboarding, syllabus parsing, calendar, tasks, and the AI agent layer that ties it all together.
 
+## Implementation Status (as of latest commit)
+
+| Scope | Status | Notes |
+|-------|--------|-------|
+| Scope 0 (orb + lock + negotiation) | ✅ Pre-existing | Untouched. Still uses `mock-context.json`. |
+| Scope 1 (Onboarding + Syllabus Parsing) | ✅ Done | Multi-step wizard, Gemini multimodal PDF parser, auto-creates tasks & events. |
+| Scope 2 (Calendar + Tasks + Planner Chat) | ✅ Done | Month/week calendar, per-subject task lists, Study Planner agent with 11 Gemini function-calling tools. |
+| Scope 3 (Smart AI Behaviors) | ⬜ Not started | Auto-reschedule, suggest-next, subtask breakdown, duration estimation, at-risk flagging. |
+| Scope 4 (Wire real context into orb negotiation) | ⬜ Not started | Replace `mock-context.json` consumer with live Turso query. |
+| Scope 5 (Pre-test, persistence, notifications) | ⬜ Stretch, not started | — |
+
+### Where the new code lives
+
+**Schema & data layer** (single source of truth: `electron/data/bootstrap.ts` raw DDL + `src/lib/schema.ts` Drizzle types — both must be edited together when changing the schema):
+- `src/lib/schema.ts` — Drizzle table definitions (`user_profile`, `subjects`, `syllabi`, `tasks`, `events`).
+- `electron/data/bootstrap.ts` — `CREATE TABLE IF NOT EXISTS` runs on Electron app start; logs `tables present: …` to the main-process console.
+- `electron/data/{profile,subjects,syllabi,tasks,events}.ts` — DAL functions.
+
+**Agents** (all mirror the Copilot Studio shape — `name`, `description`, `instructions`, `knowledge`, `triggers` — see existing `electron/agent/config.ts` as the canonical template):
+- `electron/agent/syllabusParser.ts` — Gemini multimodal PDF parser. Returns structured deadlines, exams, grading breakdown, topics, difficulty.
+- `electron/agent/studyPlanner.ts` — Conversational planner with function-calling tools (`list_subjects`, `list_tasks`, `list_events`, `create_task`, `update_task`, `mark_task_done`, `delete_task`, `create_event`, `update_event`, `delete_event`, `get_user_context`). Includes 30s per-call SDK timeout and 60s outer timeout. Verbose logging on every Gemini round-trip.
+- `electron/agent/{config,context,gemini}.ts` — Study Guardian (negotiation) agent. Pre-existing. **Do not refactor without a reason — Scope 4 will edit `context.ts` to read from Turso.**
+
+**IPC**:
+- `electron/ipc/productivity.ts` — All new IPC handlers (profile, subjects, syllabus parse, tasks, events, planner chat). Registered in `electron/main.ts` via `registerProductivityIpc()` after `app.whenReady`.
+- `electron/preload.ts` — Bridge methods. Renderer-side types in `electron/electron-env.d.ts`.
+
+**Renderer**:
+- `src/App.tsx` — Routes between `<Onboarding>` (no profile) and `<Dashboard>` (profile saved) after `schemaBootstrap`. Aesthetic is editorial/paper (Fraunces + Geist, warm terracotta on cream — see `src/index.css` for tokens).
+- `src/onboarding/Onboarding.tsx` — 7-step wizard: intro → hours → level → subjects → uploads → parsing → review → done.
+- `src/dashboard/Dashboard.tsx` — Sidebar shell with Today/Calendar/Tasks/Plan nav, **diagnostic panel showing live subject/task/event counts + manual refresh button + visible error strip**, subject swatches, session panel.
+- `src/dashboard/{TodayView,CalendarView,TasksView,PlannerChat}.tsx` — Views.
+- `src/data/store.ts` — `useProfile/useSubjects/useTasks/useEvents/useTodayTasks/useUpcomingEvents` hooks + `dataBus` + `refreshAll()`. Hooks return `[value, reload, { value, reload, loading, error }]`. **Uses a `loaderRef` to keep `reload` stable across renders — do not re-introduce the bug where `loader` was a useCallback dep.**
+
+**Scripts**:
+- `scripts/reset-db.mjs` — Drops all five tables in Turso. Run via `pnpm reset` (or `npm run reset`). After running, restart the app and you'll be back at onboarding.
+
+### Conventions to keep
+
+- **Agent shape is non-negotiable.** Every new AI capability gets its own file under `electron/agent/`, exporting a `const someAgent = { name, description, instructions, knowledge, triggers } as const`. Runner functions go below. Never bury Gemini prompts inline in route handlers or components.
+- **Schema edits = two files.** `src/lib/schema.ts` AND `electron/data/bootstrap.ts` must stay in sync. There's no drizzle-kit migration tooling — bootstrap-on-start is the workflow.
+- **Custom CSS, not Tailwind.** Aesthetic is locked in. Design tokens are in `src/index.css` (`--paper`, `--ink`, `--terra`, etc.). Use them; don't introduce a parallel system.
+- **`@google/generative-ai` 0.24.1** is the SDK. `SchemaType` (not `FunctionDeclarationSchemaType`). Function-response shape: `{ functionResponse: { name, response: { result: <anything> } } }`.
+
+### Known gotchas
+
+- The renderer's `useReload` hook intentionally returns a 3-tuple `[value, reload, meta]`. Old callers using `const [x] = ...` still work; new callers can grab `meta.loading`/`meta.error`.
+- `mock-context.json` is still the source for the negotiation agent. Don't delete it until Scope 4 lands.
+- Turso credentials and `GEMINI_API_KEY` are in `.env` (gitignored). The existing orb code already reads them, so they're known to load correctly via `dotenv/config` at the top of `electron/main.ts`.
+
 ## What's Already Built (Scope 0 — Context Only)
 
 - Electron app shell with a floating orb (bottom-right, always-on-top, idle/active states).

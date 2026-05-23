@@ -106,7 +106,10 @@ function readPdfBase64(filePath: string): string {
 }
 
 export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus> {
+  console.log(`[syllabus] parsing ${filePath}…`);
   const base64 = readPdfBase64(filePath);
+  console.log(`[syllabus] PDF size: ${Math.round(base64.length / 1024)} KB (base64)`);
+
   const model = getClient().getGenerativeModel({
     model: PARSER_MODEL,
     systemInstruction: syllabusParserAgent.instructions,
@@ -115,6 +118,7 @@ export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus
     },
   });
 
+  console.log(`[syllabus] calling Gemini…`);
   const result = await model.generateContent([
     {
       inlineData: {
@@ -128,9 +132,26 @@ export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus
   ]);
 
   const raw = result.response.text();
+  console.log(`[syllabus] Gemini response (${raw.length} chars):`);
+  console.log(raw.slice(0, 2000));
+  if (raw.length > 2000) console.log("  …(truncated)");
+
   const cleaned = stripFences(raw);
-  const parsed = JSON.parse(cleaned) as ParsedSyllabus;
-  return normalizeParsed(parsed);
+  let parsed: ParsedSyllabus;
+  try {
+    parsed = JSON.parse(cleaned) as ParsedSyllabus;
+  } catch (err) {
+    console.error(`[syllabus] JSON.parse failed:`, err);
+    throw new Error(
+      `Gemini returned invalid JSON. Raw response: ${raw.slice(0, 300)}`,
+    );
+  }
+
+  const normalized = normalizeParsed(parsed);
+  console.log(
+    `[syllabus] extracted: course="${normalized.courseName}" deadlines=${normalized.deadlines.length} exams=${normalized.exams.length} topics=${normalized.topics.length} grading=${normalized.gradingBreakdown.length}`,
+  );
+  return normalized;
 }
 
 function normalizeParsed(p: Partial<ParsedSyllabus>): ParsedSyllabus {

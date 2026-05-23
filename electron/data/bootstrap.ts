@@ -51,8 +51,23 @@ let bootstrapped = false;
 
 export async function bootstrapSchema(): Promise<void> {
   if (bootstrapped) return;
+  console.log("[bootstrap] creating tables if missing…");
   for (const sql of STATEMENTS) {
-    await db.$client.execute(sql);
+    try {
+      await db.$client.execute(sql);
+    } catch (err) {
+      console.error("[bootstrap] failed on:", sql.split("\n")[0]);
+      throw err;
+    }
   }
+
+  // Quick sanity check.
+  const result = await db.$client.execute(
+    "select name from sqlite_master where type='table' and name in ('user_profile','subjects','syllabi','tasks','events')",
+  );
+  console.log(
+    `[bootstrap] tables present: ${result.rows.map((r) => r.name).join(", ")}`,
+  );
+
   bootstrapped = true;
 }

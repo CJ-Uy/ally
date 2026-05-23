@@ -69,12 +69,20 @@ async function applyParsedToSubject(
   let deadlinesCreated = 0;
   let eventsCreated = 0;
 
+  console.log(
+    `[apply] subject ${subjectId}: ${parsed.deadlines.length} deadlines, ${parsed.exams.length} exams to insert`,
+  );
+
   for (const d of parsed.deadlines) {
     const due = composeDate(d.dueDate, d.dueTime);
-    if (!due) continue;
+    if (!due) {
+      console.warn(
+        `[apply] deadline "${d.title}" had unparseable date "${d.dueDate}" — creating task with null dueDate`,
+      );
+    }
     await createTask({
       subjectId,
-      title: d.title,
+      title: due ? d.title : `${d.title} (review date: ${d.dueDate ?? "missing"})`,
       dueDate: due,
       estimatedMinutes: d.estimatedMinutes ?? null,
       createdBy: "ai",
@@ -84,7 +92,24 @@ async function applyParsedToSubject(
 
   for (const e of parsed.exams) {
     const starts = composeDate(e.date, e.time);
-    if (!starts) continue;
+    if (!starts) {
+      console.warn(
+        `[apply] exam "${e.title}" had no usable date — creating as a dateless task instead`,
+      );
+      await createTask({
+        subjectId,
+        title: `${e.title} (set date)`,
+        description:
+          e.weightPercent !== null
+            ? `Exam worth ${e.weightPercent}% — date TBD`
+            : `Exam — date TBD`,
+        dueDate: null,
+        estimatedMinutes: null,
+        createdBy: "ai",
+      });
+      deadlinesCreated++;
+      continue;
+    }
     await createEvent({
       subjectId,
       title: e.title,
@@ -94,6 +119,9 @@ async function applyParsedToSubject(
     eventsCreated++;
   }
 
+  console.log(
+    `[apply] created ${deadlinesCreated} task(s), ${eventsCreated} event(s) for subject ${subjectId}`,
+  );
   return { deadlinesCreated, eventsCreated };
 }
 
@@ -382,11 +410,44 @@ export function registerProductivityIpc() {
   ipcMain.handle("planner:chat", async (_e, payload: { text: string }) => {
     const text = String(payload?.text ?? "").trim();
     if (!text) return { visibleText: "" };
+
     const history = plannerSession.history.slice();
     plannerSession.history.push({ role: "user", text });
-    const reply = await sendToPlanner(history, text);
-    plannerSession.history.push({ role: "model", text: reply.visibleText });
-    return { visibleText: reply.visibleText };
+
+    console.log(`\n[planner:chat] ─── new turn (${new Date().toISOString()}) ───`);
+    const started = Date.now();
+
+    const TIMEOUT_MS = 60_000;
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () =>
+          reject(new Error(`Planner timed out after ${TIMEOUT_MS / 1000}s`)),
+        TIMEOUT_MS,
+      );
+    });
+
+    try {
+      const reply = await Promise.race([
+        sendToPlanner(history, text),
+        timeout,
+      ]);
+      const elapsed = Date.now() - started;
+      console.log(`[planner:chat] completed in ${elapsed}ms`);
+      plannerSession.history.push({ role: "model", text: reply.visibleText });
+      return { visibleText: reply.visibleText };
+    } catch (err) {
+      const elapsed = Date.now() - started;
+      console.error(`[planner:chat] failed after ${elapsed}ms:`, err);
+      const message = err instanceof Error ? err.message : String(err);
+      // Don't push the error into history so the next turn can try fresh.
+      plannerSession.history.pop();
+      return {
+        visibleText: `Planner error: ${message}\n\n(Check the Electron main-process console for the full stack trace.)`,
+      };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   });
 
   ipcMain.handle("planner:reset", async () => {

@@ -159,6 +159,8 @@ export function CalendarView() {
     );
   };
 
+  const totalItems = events.length + tasks.filter((t) => t.dueDate).length;
+
   return (
     <>
       <header className="view-head">
@@ -192,6 +194,16 @@ export function CalendarView() {
           </button>
         </div>
       </header>
+
+      {totalItems === 0 && (
+        <div className="empty">
+          <p className="empty__title">Nothing on the calendar yet.</p>
+          <p>
+            Upload syllabi during onboarding, add tasks in the Tasks view, or
+            ask the planner to create something.
+          </p>
+        </div>
+      )}
 
       <section className="card cal">
         <div className="cal__weekdays">
