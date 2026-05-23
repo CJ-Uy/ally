@@ -1,10 +1,24 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { CalendarPage } from "./pages/CalendarPage";
-import { SubjectsPage } from "./pages/SubjectsPage";
+import { SubjectsPage, type Subject } from "./pages/SubjectsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
+import { SessionEndPage } from "./pages/SessionEndPage";
+import { SubjectDetailPage } from "./pages/SubjectDetailPage";
+import { AddSubjectPage } from "./pages/AddSubjectPage";
+import { AddSemesterPage } from "./pages/AddSemesterPage";
 
-type Page = "dashboard" | "calendar" | "subjects" | "settings";
+type Page =
+  | "onboarding"
+  | "dashboard"
+  | "calendar"
+  | "subjects"
+  | "subject-detail"
+  | "add-subject"
+  | "add-semester"
+  | "session-end"
+  | "settings";
 
 function formatMmSs(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -39,7 +53,7 @@ function Squiggle({ color, width = 80 }: { color: string; width?: number }) {
   );
 }
 
-function DashboardPage({ snap, onToggle }: { snap: SessionStateSnapshot | null; onToggle: () => void }) {
+function DashboardPage({ snap, onToggle, onSessionEnd }: { snap: SessionStateSnapshot | null; onToggle: () => void; onSessionEnd: () => void }) {
   const sessionActive = snap?.session.active ?? false;
   const breakActive   = snap?.break.active   ?? false;
   const paused        = snap?.session.paused  ?? false;
@@ -83,7 +97,7 @@ function DashboardPage({ snap, onToggle }: { snap: SessionStateSnapshot | null; 
           </div>
         </div>
         <div className="workspace__actions">
-          <button className="btn" type="button" onClick={onToggle}>End session</button>
+          <button className="btn" type="button" onClick={onSessionEnd}>End session</button>
         </div>
       </div>
 
@@ -121,7 +135,9 @@ function DashboardPage({ snap, onToggle }: { snap: SessionStateSnapshot | null; 
 
 export default function App() {
   const [snap, setSnap]   = useState<SessionStateSnapshot | null>(null);
-  const [page, setPage]   = useState<Page>("dashboard");
+  const [page, setPage]   = useState<Page>("onboarding");
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [navPage, setNavPage] = useState<Page>("dashboard");
 
   useEffect(() => {
     if (!window.api?.sessionGetState) return;
@@ -135,10 +151,42 @@ export default function App() {
     else                      void window.api.sessionStart();
   };
 
-  const goTo = (id: string) => {
-    if (id === "history") return; // stub — future feature
-    setPage(id as Page);
+  const goTo = (id: Page | "history") => {
+    if (id === "history") return;
+    const target = id as Page;
+    setNavPage(target);
+    setPage(target);
   };
+
+  const goToSubjectDetail = (s: Subject) => {
+    setSelectedSubject(s);
+    setPage("subject-detail");
+  };
+
+  const activeNavPage = (["dashboard", "calendar", "subjects", "settings"] as Page[]).includes(page)
+    ? page
+    : navPage;
+
+  const isFullscreen = page === "onboarding" || page === "session-end" || page === "add-semester";
+
+  if (isFullscreen) {
+    return (
+      <div className="app-shell app-shell--fullscreen">
+        {page === "onboarding" && (
+          <OnboardingPage onDone={() => { setPage("dashboard"); setNavPage("dashboard"); }} />
+        )}
+        {page === "session-end" && (
+          <SessionEndPage onRestart={() => { setPage("dashboard"); setNavPage("dashboard"); }} />
+        )}
+        {page === "add-semester" && (
+          <AddSemesterPage
+            onBack={() => setPage("subjects")}
+            onDone={() => { setPage("subjects"); setNavPage("subjects"); }}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -154,7 +202,7 @@ export default function App() {
             <button
               key={id}
               type="button"
-              className={`sidebar-nav__item${page === id ? " sidebar-nav__item--active" : ""}${id === "history" ? " sidebar-nav__item--disabled" : ""}`}
+              className={`sidebar-nav__item${activeNavPage === id ? " sidebar-nav__item--active" : ""}${id === "history" ? " sidebar-nav__item--disabled" : ""}`}
               onClick={() => goTo(id)}
             >
               {label}
@@ -162,7 +210,7 @@ export default function App() {
           ))}
         </nav>
 
-        {page === "dashboard" && (
+        {activeNavPage === "dashboard" && (
           <>
             <div className="sidebar__label">Today</div>
             <ul className="task-list">
@@ -188,10 +236,35 @@ export default function App() {
 
       {/* ── Main ── */}
       <main className="workspace">
-        {page === "dashboard" && <DashboardPage snap={snap} onToggle={toggle} />}
+        {page === "dashboard" && (
+          <DashboardPage
+            snap={snap}
+            onToggle={toggle}
+            onSessionEnd={() => setPage("session-end")}
+          />
+        )}
         {page === "calendar"  && <CalendarPage />}
-        {page === "subjects"  && <SubjectsPage />}
-        {page === "settings"  && <SettingsPage />}
+        {page === "subjects"  && (
+          <SubjectsPage
+            onSelectSubject={goToSubjectDetail}
+            onAddSubject={() => setPage("add-subject")}
+            onAddSemester={() => setPage("add-semester")}
+          />
+        )}
+        {page === "subject-detail" && selectedSubject && (
+          <SubjectDetailPage
+            subject={selectedSubject}
+            onBack={() => setPage("subjects")}
+            onStartSession={() => { setPage("dashboard"); setNavPage("dashboard"); toggle(); }}
+          />
+        )}
+        {page === "add-subject" && (
+          <AddSubjectPage
+            onBack={() => setPage("subjects")}
+            onAddSemester={() => setPage("add-semester")}
+          />
+        )}
+        {page === "settings" && <SettingsPage />}
       </main>
     </div>
   );

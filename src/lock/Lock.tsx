@@ -35,6 +35,8 @@ export function Lock() {
   const [messages, setMessages] = useState<ChatLine[]>([]);
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
+  const [granted, setGranted] = useState(false);
+  const countdown = "04:32";
   const listRef  = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -57,7 +59,15 @@ export function Lock() {
 
   const send = async () => {
     const text = input.trim();
-    if (!text || loading || !window.api?.chatSend) return;
+    if (!text || loading || !window.api?.chatSend) {
+      // Demo: grant break on any message when no real API
+      if (text && !window.api?.chatSend) {
+        setMessages(prev => [...prev, { role: "user", text }, { role: "agent", text: "Okay — 5 minutes. Go stretch. I'll bring you back." }]);
+        setInput("");
+        setGranted(true);
+      }
+      return;
+    }
     setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
     setLoading(true);
@@ -85,6 +95,46 @@ export function Lock() {
   const close = () => void window.api?.lockClose?.();
 
   const keyword = info?.keyword ?? "This site";
+
+  if (granted) {
+    return (
+      <div className="lock lock--granted">
+        <div className="lock__statusbar">
+          <span className="lock__sticker lock__sticker--granted">✓ Granted</span>
+          <span className="lock__sticker lock__sticker--paused">break · 5 min</span>
+        </div>
+
+        <div className="lock__scene lock__scene--granted">
+          <div className="lock__ally-col">
+            <div className="lock__ally-wrap">
+              <img src="/ally.png" alt="Ally" className="lock__ally-img" />
+            </div>
+            <div className="lock__ally-label">Ally · study guardian</div>
+          </div>
+
+          <div className="lock__chat-col">
+            <div className="lock__bubble lock__bubble--granted">
+              <p className="lock__bubble-headline">5 minutes. Go stretch.</p>
+              <p className="lock__bubble-sub">I'll let you know when it's time to come back.</p>
+              <svg width={80} height={8} viewBox="0 0 80 8" style={{ marginTop: 8 }}>
+                <path d="M2 5 Q 10 1, 20 4 T 40 4 T 60 4 T 78 4"
+                  stroke="var(--sage)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              </svg>
+            </div>
+
+            <div className="lock__countdown-wrap">
+              <div className="lock__countdown">{countdown}</div>
+              <div className="lock__countdown-label">remaining</div>
+            </div>
+
+            <button type="button" className="btn btn--primary" onClick={() => { setGranted(false); close(); }}>
+              I'm back →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="lock">

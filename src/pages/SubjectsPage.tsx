@@ -1,4 +1,14 @@
-const SUBJECTS = [
+export type Subject = {
+  name: string;
+  color: string;
+  progress: number;
+  chapter: string;
+  next: string;
+  upcoming: string;
+  time: string;
+};
+
+export const SUBJECTS: Subject[] = [
   {
     name: "Linear Algebra",
     color: "var(--sky)",
@@ -37,7 +47,13 @@ const SUBJECTS = [
   },
 ];
 
-export function SubjectsPage() {
+type SubjectsPageProps = {
+  onSelectSubject: (s: Subject) => void;
+  onAddSubject: () => void;
+  onAddSemester: () => void;
+};
+
+export function SubjectsPage({ onSelectSubject, onAddSubject, onAddSemester }: SubjectsPageProps) {
   return (
     <div className="page-subjects">
       <div className="page-header">
@@ -45,7 +61,10 @@ export function SubjectsPage() {
           <div className="page-eyebrow">Your subjects · {SUBJECTS.length}</div>
           <h2 className="page-title">Where you are, in each.</h2>
         </div>
-        <button className="btn btn--primary" type="button">+ Add subject</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn" type="button" onClick={onAddSemester}>+ Add semester</button>
+          <button className="btn btn--primary" type="button" onClick={onAddSubject}>+ Add subject</button>
+        </div>
       </div>
 
       <div className="subjects-grid">
@@ -83,14 +102,13 @@ export function SubjectsPage() {
             </div>
 
             <div className="subject-card__actions">
-              <button className="btn btn--sm" type="button">Open</button>
+              <button className="btn btn--sm" type="button" onClick={() => onSelectSubject(s)}>Open</button>
               <button className="btn btn--sm" type="button">Update progress</button>
             </div>
           </div>
         ))}
 
-        {/* Add subject card */}
-        <div className="subject-card subject-card--add">
+        <div className="subject-card subject-card--add" onClick={onAddSubject}>
           <div className="subject-card__add-icon">+</div>
           <div className="subject-card__add-label">Add a subject</div>
           <div className="subject-card__add-sub">Upload a syllabus</div>
