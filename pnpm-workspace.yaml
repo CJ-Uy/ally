@@ -1,3 +1,4 @@
 allowBuilds:
+  active-win: true
   electron: true
   esbuild: true

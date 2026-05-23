@@ -3,6 +3,9 @@ import path from 'node:path'
 import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
 
+// If this leaks in from the shell, Electron runs like Node and `app` is undefined.
+delete process.env.ELECTRON_RUN_AS_NODE
+
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
