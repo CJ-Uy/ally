@@ -31,44 +31,120 @@ import {
   type EventType,
 } from "../data/events";
 import { analyzeAtRiskTasks, rankNextTasks } from "../data/analysis";
+import { listSyllabi } from "../data/syllabi";
+import { currentStreakDays, getTodayActivity } from "../data/activity";
+import {
+  elapsedMinutes as sessionElapsedMinutes,
+  getCurrentSubject,
+  isSessionActive,
+} from "../session";
 import { modelFor } from "./models";
 
 export const studyPlannerAgent = {
   name: "Study Planner",
   description:
     "An AI agent that helps the user manage their study plan — creating, updating, and organizing tasks and calendar events through conversation.",
-  instructions: `You are Study Planner, the user's study assistant. You manage their academic tasks and calendar, and proactively help them stay on top of their work.
+  instructions: `You are Study Planner, the user's autonomous study chief of staff. The user wants action, not interrogation. Default to ACTING, not asking.
 
-CRITICAL: ALWAYS reply with a visible message to the user. Never return an empty response. If you do nothing else, at least acknowledge the user's message in one sentence.
+═══════════════════════════════════════════════════════════
+PRIME DIRECTIVE: ACT, DON'T ASK
+═══════════════════════════════════════════════════════════
 
-Tone: warm, concise, and direct. No filler. Confirm destructive actions (delete, bulk update, reschedule multiple tasks) in one short sentence before executing.
+If the snapshot contains the answer, USE IT. Do not ask the user to confirm or supply information that's already in the LIVE USER STATE block. Reading the snapshot is your job, not theirs.
 
-A LIVE USER STATE snapshot is provided in the system context at the start of every turn — use it as your primary source of truth. You do NOT need to call list_subjects / list_tasks / list_events for read-only queries; the answer is already in the context. Only call tools when you need to mutate state (create, update, delete, mark done) or when you need analyzed data (at-risk, ranked next tasks).
+You may ask AT MOST ONE clarifying question per turn, and only when ALL of the following are true:
+  1. The answer is genuinely not derivable from the snapshot, syllabi, tasks, events, OR sensible defaults.
+  2. Guessing wrong would create non-trivial work to undo (e.g. wrong subject, wrong week).
+  3. You cannot just pick a reasonable default and say "I picked X — tell me if you want Y instead."
 
-If the snapshot says "Subjects: none": the user has no subjects yet. Tell them so and offer to create one directly (call create_task with a new subjectName — the system will auto-create the subject) or suggest they add a syllabus.
+For anything else: pick the most reasonable interpretation, do the work, and report what you did. The user can correct you in a follow-up — that's cheap. Forcing them to fill out a form is expensive.
 
-If subjects exist but tasks are empty: tell the user and offer to add one.
+═══════════════════════════════════════════════════════════
+INFERENCE PLAYBOOK — apply these patterns automatically
+═══════════════════════════════════════════════════════════
 
-SMART BEHAVIORS — use these tools when relevant:
+A) "Study for the <exam> exam" / "plan my <exam> studying":
+  → Find the exam in the Calendar section of the snapshot (matching subject + type "exam" + title containing "midterm"/"final"/etc).
+  → Find every open task in that subject whose due date is BEFORE the exam date. Those are the relevant prep materials.
+  → Tasks due AFTER the exam are NOT relevant — ignore them for this plan.
+  → Build a sequence of study tasks (review sessions, practice problems, mock-exam pass) staggered between today and 24h before the exam.
+  → Use the user's requested prefix verbatim if they gave one (e.g. "[ME - Study]"). Otherwise prefix with "[<Subject> Study]".
+  → Estimate each task: 60-90m for content review, 45-60m for a problem-set review, 90-120m for a full practice pass.
+  → CREATE all the tasks in this turn with create_task. Do not just describe them. Do not ask for approval.
 
-- "What should I work on next?" / "What's most urgent?" → call suggest_next_task. Pick ONE candidate from its ranked list, name it by id, and explain in one sentence why (urgency + workload). Do not invent tasks.
+B) "Plan my week" / "what's the plan":
+  → Look at every open task with a due date in the next 7 days. Group by day. Propose a study order inline (no tool call) — no rescheduling unless the user said to.
 
-- "What's at risk?" / "Am I behind?" / "What's overdue?" → call check_at_risk. Report each at-risk item with its title, subject, and the reason (overdue by Xh, or only Yh left but ~Zm of work needed). If the list is empty, say so plainly.
+C) "Break this down" with no task id specified:
+  → If the snapshot has exactly one obvious oversized task (>120m estimate, or matches the user's keywords), use it. Otherwise pick the one most relevant to what they said. Only ask which one if there are 3+ plausible matches.
 
-- "Break this task down" / "this assignment is too big" → call breakdown_task with parentTaskId and 3-6 subtasks. Each subtask gets a focused title, a sensible dueDate staggered before the parent's due date, and an estimatedMinutes. Use the parent task's title and due date from the snapshot to pick reasonable splits.
+D) Anything ambiguous about a date:
+  → Default to ISO date math from the snapshot's "Current date/time". Never ask "what's today's date?".
 
-- "How long will this take?" / a newly-created task has no estimate → call estimate_duration with task_id and minutes. Base your estimate on: task type (reading ≈ 30m, homework problem set ≈ 45-60m, project chunk ≈ 90m, exam study session ≈ 60m), subject difficulty if you know it, the user's study_hours_per_week from the snapshot, AND the subject's familiarity tag if present in the snapshot — beginner adds 30-50%, familiar leaves it unchanged, confident shaves 20-30% off.
+═══════════════════════════════════════════════════════════
+ANTI-PATTERNS — these are FORBIDDEN
+═══════════════════════════════════════════════════════════
 
-- "Reschedule my week" / user is behind on multiple deadlines → call check_at_risk first to see what needs to move, then propose changes inline as plain text (e.g. "Move Calculus PSet to Sat, History essay to Sun"). Once the user confirms, call propose_reschedule with the full list of {taskId, newDueDate} pairs in one call. Never reschedule fixed events (exams) — only tasks.
+✗ "I need to know the exact date of your Math midterm." — The snapshot lists every event in the next 120 days. Look at it.
+✗ "Could you clarify which problem sets are most relevant?" — Tasks due before the exam are relevant; tasks due after are not. That's the rule. Apply it.
+✗ "I'll create study tasks. Once you confirm, I'll proceed." — No. Create them now and tell the user what you created.
+✗ "I cannot access your calendar." — You have it. It's right above this prompt under "Calendar (events…)".
+✗ Long preambles ("To start, I need…", "First, let me…", "Once I have this information…"). Just do the thing.
+✗ Dumping JSON or tool call arguments at the user.
+✗ Confirming creates. Creating tasks is NOT destructive — it's the whole point. Just create and report.
 
-When creating tasks or events:
-- Use subject names exactly as shown in the snapshot when referring to existing subjects. Use a new name to create a new subject.
-- If the user gives a relative date ("tomorrow", "next Friday"), resolve it to a calendar date using the current date in the system context.
-- If estimated_minutes is missing for a new task, set it via estimate_duration after creating, or include it inline.
+═══════════════════════════════════════════════════════════
+WHEN CONFIRMATION IS ACTUALLY REQUIRED
+═══════════════════════════════════════════════════════════
 
-After a successful tool call, confirm what you did in one short sentence ("Added 'Read chapter 4' to Calculus, due Friday." or "Broke 'Final project' into 4 subtasks across this week."). Do not dump JSON at the user.
+Only confirm before:
+- Deleting tasks or events (delete_task, delete_event)
+- Bulk updates touching 5+ tasks
+- Rescheduling multiple existing tasks (propose_reschedule)
 
-If a tool call fails, tell the user what went wrong in plain English. Don't retry the same call without changing inputs.`,
+Confirmation = ONE short sentence ("About to delete 'X' — confirm?"), then wait.
+
+Everything else — create_task, create_event, mark_task_done, update_task, breakdown_task, estimate_duration — acts immediately, no confirmation.
+
+═══════════════════════════════════════════════════════════
+DATA ACCESS — you have full read/write
+═══════════════════════════════════════════════════════════
+
+The LIVE USER STATE snapshot is your primary source of truth. It includes:
+- Profile (study hours, education level), today's streak / sessions / breaks, active session info.
+- Every subject with familiarity, syllabus difficulty, grading breakdown, topic list.
+- Every open task (up to 60) sorted by due date, with parent links + status.
+- Recently completed tasks (last 10).
+- Every event (exams, classes, deadlines) from 7 days ago to 120 days out.
+
+For read-only queries, DO NOT call list_subjects / list_tasks / list_events — the data is right above. Only call list_* tools if something is genuinely outside the snapshot window.
+
+═══════════════════════════════════════════════════════════
+SMART BEHAVIOR TOOLS
+═══════════════════════════════════════════════════════════
+
+- "What should I work on next?" → suggest_next_task → pick ONE, name it by id, one-sentence reason.
+- "What's at risk?" / "Am I behind?" → check_at_risk → list each with reason, or say "nothing at risk" plainly.
+- "Break <task> down" → breakdown_task with parentTaskId and 3-6 subtasks staggered before the parent's due date.
+- New task without an estimate → estimate_duration. Base on: type (reading 30m, problem set 45-60m, project chunk 90m, study session 60-90m), syllabus difficulty, study_hours_per_week, AND subject familiarity (beginner +30-50%, familiar baseline, confident −20-30%).
+- "Reschedule my week" → check_at_risk first → propose inline → propose_reschedule once the user confirms. Tasks only, never events.
+
+═══════════════════════════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════════════════════════
+
+After acting, respond in this shape:
+1. ONE sentence summarizing what you did, with concrete counts/titles.
+2. (Optional) ONE sentence on follow-up the user might want.
+
+Examples:
+✓ "Created 6 [ME - Study] tasks staggered Jun 14 → Jun 21, totaling ~7h. Want me to also schedule mock-exam blocks?"
+✓ "Broke 'Final project' into 4 subtasks across Jun 18-25, ~6h total."
+✓ "Marked PSet 1 done."
+
+Never lead with caveats. Never repeat the user's request back at them. Never dump tool JSON. If a tool fails, say so in plain English in one sentence and propose a next step.
+
+CRITICAL FALLBACK: every turn MUST produce at least one visible sentence to the user. Never return empty text.`,
   knowledge: {
     note: "Live data is queried via tools (list_subjects, list_tasks, list_events). No preloaded knowledge.",
   },
@@ -631,17 +707,46 @@ export interface PlannerReply {
 
 const MAX_TOOL_ITERATIONS = 6;
 
+const TASK_CAP = 60;
+const EVENT_PAST_DAYS = 7;
+const EVENT_FUTURE_DAYS = 120;
+const RECENT_DONE_CAP = 10;
+const TOPICS_PREVIEW = 12;
+
+function safeJsonArray(raw: string | null): unknown[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 async function formatLiveContext(): Promise<string> {
   try {
-    const [subjects, allTasks, allEvents, profile] = await Promise.all([
+    const [
+      subjects,
+      allTasks,
+      allEvents,
+      profile,
+      syllabi,
+      activity,
+      streak,
+    ] = await Promise.all([
       listSubjects(),
       listTasks(),
       listEvents(),
       getProfile(),
+      listSyllabi(),
+      getTodayActivity(),
+      currentStreakDays(),
     ]);
 
+    const now = new Date();
     const lines: string[] = ["LIVE USER STATE (snapshot at start of turn):"];
 
+    // --- Profile + session ---
     if (profile) {
       lines.push(
         `- Profile: ${profile.educationLevel} student, ${profile.studyHoursPerWeek} hrs/week target`,
@@ -649,6 +754,20 @@ async function formatLiveContext(): Promise<string> {
     } else {
       lines.push("- Profile: not yet set (user hasn't completed onboarding)");
     }
+    lines.push(
+      `- Today: streak ${streak} day(s), ${activity.sessionsCompleted} session(s) completed, ${activity.breaksUsed} break(s) used`,
+    );
+    if (isSessionActive()) {
+      lines.push(
+        `- Active study session: ${sessionElapsedMinutes()}m in, current subject "${getCurrentSubject()}"`,
+      );
+    } else {
+      lines.push("- Active study session: none");
+    }
+
+    // --- Subjects + per-subject syllabus summary ---
+    const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+    const syllabusBySubject = new Map(syllabi.map((s) => [s.subjectId, s]));
 
     if (subjects.length === 0) {
       lines.push("- Subjects: none");
@@ -660,15 +779,42 @@ async function formatLiveContext(): Promise<string> {
       for (const s of subjects) {
         const fam = s.familiarity ? ` [familiarity: ${s.familiarity}]` : "";
         lines.push(`  - "${s.name}"${fam}`);
+        const syl = syllabusBySubject.get(s.id);
+        if (syl) {
+          if (syl.difficulty) {
+            lines.push(`      difficulty: ${syl.difficulty}`);
+          }
+          const grading = safeJsonArray(syl.gradingBreakdown);
+          if (grading.length > 0) {
+            const pretty = grading
+              .map((g) => {
+                const obj = g as { component?: unknown; weightPercent?: unknown };
+                return `${obj.component ?? "?"} ${obj.weightPercent ?? "?"}%`;
+              })
+              .join(", ");
+            lines.push(`      grading: ${pretty}`);
+          }
+          const topics = safeJsonArray(syl.topics) as string[];
+          if (topics.length > 0) {
+            const head = topics.slice(0, TOPICS_PREVIEW).join("; ");
+            const more =
+              topics.length > TOPICS_PREVIEW
+                ? ` (+${topics.length - TOPICS_PREVIEW} more)`
+                : "";
+            lines.push(`      topics: ${head}${more}`);
+          }
+        }
       }
     }
 
+    // --- Tasks: open (all, capped), then recent done ---
     const open = allTasks.filter((t) => t.status !== "done");
-    const done = allTasks.length - open.length;
-    lines.push(`- Tasks: ${open.length} open, ${done} done`);
+    const doneTasks = allTasks
+      .filter((t) => t.status === "done")
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    lines.push(`- Tasks: ${open.length} open, ${doneTasks.length} done`);
 
     if (open.length > 0) {
-      const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
       const sorted = open
         .slice()
         .sort((a, b) => {
@@ -676,33 +822,68 @@ async function formatLiveContext(): Promise<string> {
           const bd = b.dueDate ? b.dueDate.getTime() : Infinity;
           return ad - bd;
         })
-        .slice(0, 10);
+        .slice(0, TASK_CAP);
+      lines.push(`  Open tasks (showing ${sorted.length}/${open.length}):`);
       for (const t of sorted) {
+        const subj = subjectMap.get(t.subjectId) ?? "?";
+        const due = t.dueDate
+          ? t.dueDate.toISOString().slice(0, 16)
+          : "no date";
+        const est = t.estimatedMinutes ? `, ~${t.estimatedMinutes}m` : "";
+        const parent = t.parentTaskId ? `, parent ${t.parentTaskId}` : "";
+        const status = t.status === "todo" ? "" : `, ${t.status}`;
+        lines.push(
+          `    - [id ${t.id}] "${t.title}" — ${subj}, due ${due}${est}${parent}${status}`,
+        );
+      }
+      if (open.length > TASK_CAP) {
+        lines.push(`    …and ${open.length - TASK_CAP} more not shown — use list_tasks to drill in.`);
+      }
+    }
+
+    if (doneTasks.length > 0) {
+      const recent = doneTasks.slice(0, RECENT_DONE_CAP);
+      lines.push(`  Recently completed (${recent.length}/${doneTasks.length}):`);
+      for (const t of recent) {
         const subj = subjectMap.get(t.subjectId) ?? "?";
         const due = t.dueDate
           ? t.dueDate.toISOString().slice(0, 10)
           : "no date";
-        const est = t.estimatedMinutes ? `, ~${t.estimatedMinutes}m` : "";
-        lines.push(`  - [id ${t.id}] "${t.title}" — ${subj}, due ${due}${est}`);
+        lines.push(`    - [id ${t.id}] "${t.title}" — ${subj}, was due ${due}`);
       }
-      if (open.length > 10) lines.push(`  …and ${open.length - 10} more`);
     }
 
-    const upcomingEvents = allEvents
-      .filter((e) => e.startsAt >= new Date())
-      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-      .slice(0, 5);
-    if (upcomingEvents.length > 0) {
-      const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
-      lines.push(`- Upcoming events (${upcomingEvents.length}):`);
-      for (const e of upcomingEvents) {
+    // --- Calendar: past 7d + future 120d ---
+    const pastCutoff = new Date(now.getTime() - EVENT_PAST_DAYS * 24 * 3600 * 1000);
+    const futureCutoff = new Date(
+      now.getTime() + EVENT_FUTURE_DAYS * 24 * 3600 * 1000,
+    );
+    const relevantEvents = allEvents
+      .filter((e) => e.startsAt >= pastCutoff && e.startsAt <= futureCutoff)
+      .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+
+    if (relevantEvents.length === 0) {
+      lines.push(
+        `- Calendar (events past ${EVENT_PAST_DAYS}d → next ${EVENT_FUTURE_DAYS}d): none`,
+      );
+    } else {
+      lines.push(
+        `- Calendar (events past ${EVENT_PAST_DAYS}d → next ${EVENT_FUTURE_DAYS}d, ${relevantEvents.length} total):`,
+      );
+      for (const e of relevantEvents) {
         const subj = subjectMap.get(e.subjectId) ?? "?";
+        const when = e.startsAt.toISOString().slice(0, 16);
+        const tense = e.startsAt < now ? " [past]" : "";
         lines.push(
-          `  - [id ${e.id}] "${e.title}" (${e.type}) — ${subj}, ${e.startsAt.toISOString().slice(0, 16)}`,
+          `  - [id ${e.id}] "${e.title}" (${e.type}) — ${subj}, ${when}${tense}`,
         );
       }
-    } else {
-      lines.push("- Upcoming events: none");
+      const outside = allEvents.length - relevantEvents.length;
+      if (outside > 0) {
+        lines.push(
+          `  …and ${outside} event(s) outside this window — use list_events to retrieve.`,
+        );
+      }
     }
 
     return lines.join("\n");

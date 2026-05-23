@@ -50,3 +50,7 @@ export async function getSyllabusForSubject(
     .limit(1);
   return rows[0] ?? null;
 }
+
+export async function listSyllabi(): Promise<Syllabus[]> {
+  return db.select().from(syllabi);
+}
