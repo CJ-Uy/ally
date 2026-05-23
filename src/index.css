@@ -1,13 +1,45 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap");
+
 :root {
-  font-family: "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #0f172a;
-  background: #f5f7fb;
+  /* type */
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Geist", "Inter", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "JetBrains Mono", monospace;
+
+  /* paper palette */
+  --paper: #f4ede1;
+  --paper-deep: #ebe1cf;
+  --paper-shadow: #d8cdb6;
+  --ink: #1a1614;
+  --ink-soft: #3a322b;
+  --ink-mute: #6f6356;
+  --ink-faint: #a89d8d;
+  --line: #c8bca5;
+  --line-soft: #ddd1b8;
+
+  /* accents */
+  --terra: #c7522a;
+  --terra-deep: #8d3a1c;
+  --terra-soft: #e5b09a;
+  --moss: #5b7456;
+  --indigo: #2c3e6e;
+  --honey: #b89456;
+  --plum: #7d3a59;
+
+  /* surfaces */
+  --card: #fbf6ec;
+  --card-shadow: 0 1px 0 #fff inset, 0 2px 14px -8px rgba(60, 40, 20, 0.18),
+    0 1px 0 var(--line-soft);
+
+  line-height: 1.55;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "ss02", "cv11";
 }
 
 * {
@@ -17,39 +49,129 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--paper);
+  background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(60, 40, 20, 0.05) 1px,
+      transparent 0
+    ),
+    radial-gradient(
+      ellipse at 80% -10%,
+      rgba(199, 82, 42, 0.06) 0,
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at -10% 110%,
+      rgba(44, 62, 110, 0.05) 0,
+      transparent 50%
+    );
+  background-size: 24px 24px, 100% 100%, 100% 100%;
 }
 
 #root {
   min-height: 100vh;
 }
 
-button,
-input {
-  font-family: inherit;
-}
-
+/* Reset bones */
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.55em 1.1em;
-  font-size: 0.95em;
-  font-weight: 600;
-  background-color: #0f172a;
-  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  background: var(--ink);
+  color: var(--paper);
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.2, 0.7, 0.3, 1),
+    background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
 button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 6px 16px -8px rgba(26, 22, 20, 0.45);
 }
 
-input {
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+button.ghost:hover {
+  background: var(--paper-deep);
+}
+
+button.accent {
+  background: var(--terra);
+  border-color: var(--terra);
+  color: #fff;
+}
+button.accent:hover {
+  background: var(--terra-deep);
+  border-color: var(--terra-deep);
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  border: 1px solid #d1d5db;
-  padding: 0.5em 0.75em;
-  min-width: 220px;
+  padding: 0.55rem 0.8rem;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(199, 82, 42, 0.18);
+}
+
+::selection {
+  background: var(--terra);
+  color: #fff;
+}
+
+a {
+  color: var(--terra-deep);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+}
+a:hover {
+  color: var(--ink);
+}
+
+/* Utility shapes that appear across the app */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+}
+
+.hr-dot {
+  border: 0;
+  border-top: 1px dashed var(--line);
+  margin: 1rem 0;
 }

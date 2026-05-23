@@ -1,0 +1,141 @@
+.planner {
+  padding: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 600px;
+  max-height: calc(100vh - 220px);
+}
+
+.planner__scroll {
+  padding: 24px 28px;
+  overflow-y: auto;
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.planner__empty {
+  text-align: center;
+  padding: 60px 20px;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.planner__empty-title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.6rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.planner__empty-sub {
+  color: var(--ink-mute);
+  margin: 0 0 18px;
+}
+
+.planner__starters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  max-width: 540px;
+}
+
+.planner__starter {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.92rem;
+  padding: 0.45rem 0.9rem;
+}
+.planner__starter:hover {
+  border-color: var(--terra);
+  color: var(--terra-deep);
+  background: rgba(199, 82, 42, 0.06);
+}
+
+.planner__turn {
+  display: grid;
+  gap: 6px;
+  max-width: 78%;
+}
+.planner__turn--user {
+  justify-self: end;
+  text-align: right;
+}
+.planner__turn--model {
+  justify-self: start;
+}
+
+.planner__who {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.planner__bubble {
+  background: var(--card);
+  border: 1px solid var(--line-soft);
+  padding: 12px 16px;
+  border-radius: 4px;
+  font-size: 0.96rem;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.planner__turn--user .planner__bubble {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+.planner__typing {
+  display: flex;
+  gap: 6px;
+  padding: 16px 18px;
+  align-items: center;
+}
+.planner__typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--terra);
+  animation: dot 1.2s ease-in-out infinite;
+}
+.planner__typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.planner__typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.planner__input {
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--paper-deep);
+}
+
+.planner__input input {
+  background: var(--card);
+}

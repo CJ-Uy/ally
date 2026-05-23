@@ -1,0 +1,81 @@
+import { useState } from "react";
+import { SessionPanel } from "../session/SessionPanel";
+import { useSubjects } from "../data/store";
+import { TodayView } from "./TodayView";
+import { CalendarView } from "./CalendarView";
+import { TasksView } from "./TasksView";
+import { PlannerChat } from "./PlannerChat";
+import "./Dashboard.css";
+
+type View = "today" | "calendar" | "tasks" | "planner";
+
+const NAV: Array<{ id: View; num: string; label: string; hint: string }> = [
+  { id: "today", num: "01", label: "Today", hint: "what's on deck" },
+  { id: "calendar", num: "02", label: "Calendar", hint: "weeks & months" },
+  { id: "tasks", num: "03", label: "Tasks", hint: "by subject" },
+  { id: "planner", num: "04", label: "Plan", hint: "talk to ally" },
+];
+
+export function Dashboard() {
+  const [view, setView] = useState<View>("today");
+  const [subjects] = useSubjects();
+
+  return (
+    <div className="dash">
+      <aside className="dash__rail">
+        <div className="dash__brand">
+          <span className="dash__mark">A</span>
+          <div>
+            <span className="dash__brandtext">Ally</span>
+            <span className="dash__brandsub">study companion</span>
+          </div>
+        </div>
+
+        <nav className="dash__nav">
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              className={`dash__navitem ${view === n.id ? "is-active" : ""}`}
+              onClick={() => setView(n.id)}
+            >
+              <span className="dash__navnum">{n.num}</span>
+              <span className="dash__navmain">
+                <span className="dash__navlabel">{n.label}</span>
+                <span className="dash__navhint">{n.hint}</span>
+              </span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="dash__subjects">
+          <p className="eyebrow dash__subjhead">Subjects</p>
+          <ul className="dash__subjlist">
+            {subjects.length === 0 && (
+              <li className="dash__subjempty">none yet</li>
+            )}
+            {subjects.map((s) => (
+              <li key={s.id} className="dash__subjitem">
+                <span
+                  className="dash__subjdot"
+                  style={{ background: s.color }}
+                />
+                <span className="dash__subjname">{s.name}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="dash__sessionwrap">
+          <SessionPanel />
+        </div>
+      </aside>
+
+      <main className="dash__main">
+        {view === "today" && <TodayView />}
+        {view === "calendar" && <CalendarView />}
+        {view === "tasks" && <TasksView />}
+        {view === "planner" && <PlannerChat />}
+      </main>
+    </div>
+  );
+}

@@ -1,249 +1,40 @@
-.app-shell {
+.app-loading {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
-  background: #f5f7fb;
-}
-
-.sidebar {
-  background: #101820;
-  color: #f8fafc;
-  padding: 24px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.brand__mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: grid;
   place-items: center;
-  background: #35c2a1;
-  color: #101820;
-}
-
-.nav {
-  display: grid;
-  gap: 8px;
-}
-
-.nav__item {
-  width: 100%;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #cbd5e1;
-  text-align: left;
-  padding: 11px 12px;
-  box-shadow: none;
-}
-
-.nav__item:hover,
-.nav__item--active {
-  background: #233241;
-  color: #ffffff;
-  transform: none;
-  box-shadow: none;
-}
-
-.workspace {
-  min-width: 0;
-  padding: 28px;
-  display: grid;
-  gap: 20px;
-  align-content: start;
-}
-
-.topbar,
-.hero-panel,
-.panel {
-  border: 1px solid #d9e2ec;
-  background: #ffffff;
-  border-radius: 8px;
-}
-
-.topbar {
-  min-height: 92px;
-  padding: 20px 22px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 16px;
+  color: var(--ink-mute);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
 }
 
-.topbar h1,
-.hero-panel h2,
-.panel h3 {
-  margin: 0;
-  letter-spacing: 0;
-}
-
-.topbar h1 {
-  font-size: 28px;
-}
-
-.eyebrow {
-  margin: 0 0 4px;
-  color: #617083;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.badge {
-  border: 1px solid #b7c8d9;
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: #28566f;
-  background: #edf8fb;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.hero-panel {
-  min-height: 180px;
-  padding: 24px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 160px;
-  align-items: center;
-  gap: 24px;
-}
-
-.hero-panel h2 {
-  color: #152533;
-  font-size: 34px;
-  line-height: 1.1;
-}
-
-.hero-panel p {
-  margin: 10px 0 0;
-  color: #526171;
-  max-width: 580px;
-}
-
-.signal {
-  aspect-ratio: 1;
-  border-radius: 8px;
+.app-loading__mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--paper);
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: 4px;
-  background: #35c2a1;
-  color: #10231e;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.8rem;
+  font-weight: 500;
+  animation: appPulse 1.6s ease-in-out infinite;
 }
 
-.signal span {
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
+@keyframes appPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(199, 82, 42, 0.32);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(199, 82, 42, 0);
+  }
 }
 
-.signal strong {
-  font-size: 30px;
-}
-
-.panel-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.panel {
-  padding: 20px;
-  display: grid;
-  gap: 14px;
-  align-content: start;
-}
-
-.panel h3 {
-  font-size: 18px;
-}
-
-.app__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.status-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.status-row span {
-  border: 1px solid #d9e2ec;
-  border-radius: 8px;
-  padding: 8px 10px;
-  color: #253647;
-  background: #f8fafc;
-  font-weight: 700;
-}
-
-.app__list {
-  list-style: none;
-  padding: 0;
+.app-loading p {
   margin: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.app__list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid #e7edf4;
-  padding-bottom: 8px;
-}
-
-.app__muted {
-  color: #667789;
-}
-
-.app__error {
-  margin: 0;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 12px 14px;
-  color: #9f1239;
-  background: #fff1f2;
-  font-weight: 700;
-}
-
-@media (max-width: 760px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    padding: 16px;
-  }
-
-  .nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .workspace {
-    padding: 16px;
-  }
-
-  .hero-panel,
-  .panel-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .signal {
-    width: 140px;
-  }
+  color: var(--ink-mute);
 }

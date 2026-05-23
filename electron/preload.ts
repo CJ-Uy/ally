@@ -7,11 +7,14 @@ interface SessionStateSnapshot {
   break: { active: boolean; msRemaining: number; forKeyword?: string };
 }
 
+const invoke = <T = unknown>(channel: string, payload?: unknown) =>
+  ipcRenderer.invoke(channel, payload) as Promise<T>;
+
 const api: Window["api"] = {
-  ping: () => ipcRenderer.invoke("app:ping") as Promise<string>,
-  dbHealth: () => ipcRenderer.invoke("db:health") as Promise<{ ok: boolean }>,
+  ping: () => invoke<string>("app:ping"),
+  dbHealth: () => invoke<{ ok: boolean }>("db:health"),
   r2List: (prefix?: string) =>
-    ipcRenderer.invoke("r2:list", prefix) as Promise<{
+    invoke("r2:list", prefix) as Promise<{
       objects: Array<{
         key: string;
         size: number;
@@ -22,17 +25,16 @@ const api: Window["api"] = {
       cursor?: string;
       delimitedPrefixes: string[];
     }>,
-  sessionStart: () => ipcRenderer.invoke("session:start") as Promise<void>,
-  sessionStop: () => ipcRenderer.invoke("session:stop") as Promise<void>,
-  sessionGetState: () =>
-    ipcRenderer.invoke("session:getState") as Promise<SessionStateSnapshot>,
+  sessionStart: () => invoke<void>("session:start"),
+  sessionStop: () => invoke<void>("session:stop"),
+  sessionGetState: () => invoke<SessionStateSnapshot>("session:getState"),
   chatSend: (text: string) =>
-    ipcRenderer.invoke("chat:send", { text }) as Promise<{
+    invoke("chat:send", { text }) as Promise<{
       visibleText: string;
       granted?: boolean;
       minutes?: number;
     }>,
-  lockClose: () => ipcRenderer.invoke("lock:close") as Promise<void>,
+  lockClose: () => invoke<void>("lock:close"),
   onStateUpdate: (cb: (snap: SessionStateSnapshot) => void) => {
     const listener = (
       _event: Electron.IpcRendererEvent,
@@ -49,6 +51,45 @@ const api: Window["api"] = {
     ipcRenderer.on("lock:open", listener);
     return () => ipcRenderer.removeListener("lock:open", listener);
   },
+
+  schemaBootstrap: () => invoke<{ ok: boolean }>("schema:bootstrap"),
+
+  profileGet: () =>
+    invoke<{
+      id: number;
+      studyHoursPerWeek: number;
+      educationLevel: string;
+      onboardedAt: string;
+    } | null>("profile:get"),
+  profileSave: (payload) => invoke("profile:save", payload),
+
+  subjectsList: () => invoke("subjects:list"),
+  subjectsCreate: (payload) => invoke("subjects:create", payload),
+  subjectsUpdate: (id, patch) => invoke("subjects:update", { id, patch }),
+  subjectsDelete: (id) => invoke("subjects:delete", { id }),
+
+  syllabusPickPdf: () => invoke<string | null>("syllabus:pickPdf"),
+  syllabusParseAndApply: (subjectId, filePath) =>
+    invoke("syllabus:parseAndApply", { subjectId, filePath }),
+
+  tasksList: () => invoke("tasks:list"),
+  tasksListToday: () => invoke("tasks:listToday"),
+  tasksListOverdue: () => invoke("tasks:listOverdue"),
+  tasksListForSubject: (subjectId) =>
+    invoke("tasks:listForSubject", { subjectId }),
+  tasksCreate: (payload) => invoke("tasks:create", payload),
+  tasksUpdate: (id, patch) => invoke("tasks:update", { id, patch }),
+  tasksDelete: (id) => invoke("tasks:delete", { id }),
+
+  eventsList: () => invoke("events:list"),
+  eventsListUpcoming: () => invoke("events:listUpcoming"),
+  eventsCreate: (payload) => invoke("events:create", payload),
+  eventsUpdate: (id, patch) => invoke("events:update", { id, patch }),
+  eventsDelete: (id) => invoke("events:delete", { id }),
+
+  plannerChat: (text) => invoke("planner:chat", { text }),
+  plannerHistory: () => invoke("planner:history"),
+  plannerReset: () => invoke("planner:reset"),
 };
 
 contextBridge.exposeInMainWorld("api", api);

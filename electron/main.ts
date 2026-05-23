@@ -20,6 +20,8 @@ import {
 import { sendToAgent } from "./agent/gemini";
 import { createLockWindow, createOrbWindow } from "./windows";
 import { startPoller, stopPoller } from "./poller";
+import { registerProductivityIpc } from "./ipc/productivity";
+import { bootstrapSchema } from "./data/bootstrap";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -199,6 +201,10 @@ function bootstrap() {
     orbWin = null;
   });
 
+  void bootstrapSchema().catch((err) => {
+    console.error("[bootstrap] schema init failed:", err);
+  });
+
   startPoller({
     onLockTrigger: (info) => {
       openLockWindow(info);
@@ -213,7 +219,10 @@ function bootstrap() {
   });
 }
 
-app.whenReady().then(bootstrap);
+app.whenReady().then(() => {
+  registerProductivityIpc();
+  bootstrap();
+});
 
 app.on("before-quit", () => {
   stopPoller();
