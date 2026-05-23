@@ -109,6 +109,7 @@ export function createLockWindow(): Electron.BrowserWindow {
     height: bounds.height,
     frame: false,
     fullscreen: true,
+    kiosk: true,
     backgroundColor: "#1f2937",
     resizable: false,
     movable: false,
@@ -134,7 +135,20 @@ export function createLockWindow(): Electron.BrowserWindow {
 
   win.once("ready-to-show", () => {
     win.show();
+    win.setFullScreen(true);
+    win.setBounds(bounds);
+    win.moveTop();
     win.focus();
+    // Mimic what alt-tab does: toggle always-on-top + re-focus to force
+    // Windows to re-layer above other fullscreen apps (e.g. Chrome on YouTube).
+    setTimeout(() => {
+      if (win.isDestroyed()) return;
+      win.setAlwaysOnTop(false);
+      win.setAlwaysOnTop(true, "screen-saver");
+      win.setBounds(bounds);
+      win.moveTop();
+      win.focus();
+    }, 120);
   });
 
   return win;
