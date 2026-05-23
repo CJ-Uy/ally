@@ -93,6 +93,13 @@ export function useAtRiskTasks() {
   return useReload<AtRiskItemDto[]>(() => window.api.tasksAtRisk(), []);
 }
 
+export function useActivityToday() {
+  return useReload<ActivityTodayDto | null>(
+    () => window.api.activityToday(),
+    null,
+  );
+}
+
 export function refreshAll() {
   dataBus.notify();
 }

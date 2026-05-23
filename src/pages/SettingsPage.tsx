@@ -1,187 +1,227 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { refreshAll, useActivityToday, useProfile, useSubjects } from "../data/store";
 
-type SettingsTab = "schedule" | "distractions" | "ally" | "notifications" | "account";
+type SettingsTab = "profile" | "notifications" | "subjects" | "data";
 
-const BLOCKED_SITES = ["TikTok", "YouTube", "Instagram", "Reddit", "Twitter / X", "Netflix"];
-const ALL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const NOTIFICATION_ITEMS: { key: NotificationToggleKey; label: string; description: string }[] = [
+  {
+    key: "notifyAtRisk",
+    label: "At-risk tasks",
+    description: "Heads-up when a task can't reasonably finish before it's due.",
+  },
+  {
+    key: "notifyDueToday",
+    label: "Due today",
+    description: "A morning summary of everything due before the day is out.",
+  },
+  {
+    key: "notifyStreakDanger",
+    label: "Streak in danger",
+    description: "Nudge if your streak is about to break.",
+  },
+  {
+    key: "notifyChatResponse",
+    label: "Planner replies",
+    description: "OS notification when Ally answers in the background.",
+  },
+];
 
-function ScheduleTab() {
-  const [offDays, setOffDays] = useState(new Set(["Sat", "Sun"]));
-  const toggle = (d: string) => setOffDays(prev => {
-    const n = new Set(prev); n.has(d) ? n.delete(d) : n.add(d); return n;
-  });
+function ProfileTab() {
+  const [profile, reload] = useProfile();
+  const [hours, setHours] = useState<number>(profile?.studyHoursPerWeek ?? 15);
+  const [level, setLevel] = useState<string>(profile?.educationLevel ?? "college");
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (profile) {
+      setHours(profile.studyHoursPerWeek);
+      setLevel(profile.educationLevel);
+    }
+  }, [profile]);
+
+  const save = async () => {
+    if (!window.api?.profileSave) return;
+    setSaving(true);
+    try {
+      await window.api.profileSave({
+        studyHoursPerWeek: hours,
+        educationLevel: level,
+      });
+      await reload();
+      setSavedAt(Date.now());
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="settings-stack">
       <div className="settings-card">
-        <div className="settings-card__label">Pomodoro</div>
+        <div className="settings-card__label">Weekly study commitment</div>
         <div className="settings-sliders">
+          <div className="slider-row">
+            <div className="slider-row__label">Hours per week</div>
+            <input
+              type="range"
+              min={3}
+              max={50}
+              value={hours}
+              onChange={(e) => setHours(Number(e.target.value))}
+              style={{ flex: 1 }}
+            />
+            <div className="slider-row__value">{hours} hrs</div>
+          </div>
+        </div>
+        <div className="settings-card__hint">
+          Used to schedule study blocks and flag tasks that don't fit your weekly budget.
+        </div>
+      </div>
+
+      <div className="settings-card">
+        <div className="settings-card__label">Education level</div>
+        <div className="settings-personality">
           {[
-            { label: "Focus duration", value: 25, unit: "min", pct: 50 },
-            { label: "Short break",    value: 5,  unit: "min", pct: 25 },
-            { label: "Long break",     value: 20, unit: "min", pct: 67 },
-          ].map(s => (
-            <div key={s.label} className="slider-row">
-              <div className="slider-row__label">{s.label}</div>
-              <div className="slider-row__track">
-                <div className="slider-row__fill" style={{ width: `${s.pct}%` }} />
-                <div className="slider-row__thumb" style={{ left: `${s.pct}%` }} />
-              </div>
-              <div className="slider-row__value">{s.value} {s.unit}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <div className="settings-card__label">Study windows</div>
-        <div className="settings-sliders">
-          <div className="slider-row">
-            <div className="slider-row__label">Start no earlier</div>
-            <div className="slider-row__track">
-              <div className="slider-row__fill" style={{ width: "37%" }} />
-              <div className="slider-row__thumb" style={{ left: "37%" }} />
-            </div>
-            <div className="slider-row__value">9:00 AM</div>
-          </div>
-          <div className="slider-row">
-            <div className="slider-row__label">End no later</div>
-            <div className="slider-row__track">
-              <div className="slider-row__fill" style={{ width: "88%" }} />
-              <div className="slider-row__thumb" style={{ left: "88%" }} />
-            </div>
-            <div className="slider-row__value">11:00 PM</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <div className="settings-card__label">Off days</div>
-        <div className="semester-offdays">
-          {ALL_DAYS.map(d => (
+            { id: "high_school", label: "High school" },
+            { id: "college", label: "College" },
+          ].map((opt) => (
             <button
-              key={d}
               type="button"
-              className={`semester-offday${offDays.has(d) ? " semester-offday--on" : ""}`}
-              onClick={() => toggle(d)}
+              key={opt.id}
+              className={`personality-opt${level === opt.id ? " personality-opt--active" : ""}`}
+              onClick={() => setLevel(opt.id)}
             >
-              {d}
+              {opt.label}
             </button>
           ))}
         </div>
-        <div className="settings-card__hint">Sessions won't be scheduled on off days.</div>
       </div>
 
-      <div className="settings-card">
-        <div className="settings-card__label">Quick peek</div>
-        <div className="settings-quick-peek">
-          <div className="settings-peek-row">
-            <div className="settings-peek-day">Today</div>
-            <div className="settings-peek-slots">
-              <span className="sticker sticker--sky">9:00–10:30 · LinAlg</span>
-              <span className="sticker sticker--blush">2:00–3:00 · Spanish</span>
-            </div>
-          </div>
-          <div className="settings-peek-row">
-            <div className="settings-peek-day">Tomorrow</div>
-            <div className="settings-peek-slots">
-              <span className="sticker sticker--butter">10:00–11:30 · History</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DistractionsTab() {
-  return (
-    <div className="settings-stack">
-      <div className="settings-card">
-        <div className="settings-card__label">Agent personality</div>
-        <div className="settings-personality">
-          {["Soft", "Balanced", "Strict"].map((p, i) => (
-            <div key={p} className={`personality-opt${i === 1 ? " personality-opt--active" : ""}`}>
-              {p}
-            </div>
-          ))}
-        </div>
-        <div className="settings-card__hint">
-          Balanced: warm but skeptical. Asks before granting. Won't fall for "but it's important" without a reason.
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <div className="settings-card__label">Blocklist · {BLOCKED_SITES.length} items</div>
-        <div className="blocklist">
-          {BLOCKED_SITES.map(s => (
-            <span key={s} className="sticker sticker--blush blocklist__item">
-              {s} <button className="blocklist__remove" type="button">×</button>
-            </span>
-          ))}
-          <span className="sticker sticker--panel blocklist__add" role="button">+ add</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AllyTab() {
-  return (
-    <div className="settings-stack">
-      <div className="settings-card settings-card--ally">
-        <div className="settings-card__label">Ally appearance</div>
-        <div className="settings-ally-row">
-          <img src="/ally.png" alt="Ally" className="settings-ally-img" />
-          <div className="settings-ally-sliders">
-            <div className="slider-row">
-              <div className="slider-row__label">Idle opacity</div>
-              <div className="slider-row__track">
-                <div className="slider-row__fill" style={{ width: "20%" }} />
-                <div className="slider-row__thumb" style={{ left: "20%" }} />
-              </div>
-              <div className="slider-row__value">20%</div>
-            </div>
-            <div className="slider-row">
-              <div className="slider-row__label">Orb size</div>
-              <div className="slider-row__track">
-                <div className="slider-row__fill" style={{ width: "50%" }} />
-                <div className="slider-row__thumb" style={{ left: "50%" }} />
-              </div>
-              <div className="slider-row__value">80px</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="settings-card">
-        <div className="settings-card__label">Ally voice</div>
-        <div className="settings-personality">
-          {["Casual", "Neutral", "Formal"].map((v, i) => (
-            <div key={v} className={`personality-opt${i === 0 ? " personality-opt--active" : ""}`}>{v}</div>
-          ))}
-        </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button type="button" className="btn btn--primary" onClick={() => void save()} disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+        {savedAt && Date.now() - savedAt < 2500 && (
+          <span style={{ color: "var(--ink-soft)", fontSize: 13 }}>Saved.</span>
+        )}
       </div>
     </div>
   );
 }
 
 function NotificationsTab() {
-  const items = [
-    { label: "Session start reminder",    on: true  },
-    { label: "Break time alert",          on: true  },
-    { label: "Daily study summary",       on: true  },
-    { label: "Streak at-risk warning",    on: false },
-    { label: "Upcoming exam alert",       on: true  },
-  ];
+  const [profile, reload] = useProfile();
+  const [busy, setBusy] = useState<NotificationToggleKey | null>(null);
+
+  const toggle = async (key: NotificationToggleKey, next: boolean) => {
+    if (!window.api?.profileUpdateNotifications) return;
+    setBusy(key);
+    try {
+      await window.api.profileUpdateNotifications({ [key]: next });
+      await reload();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (!profile) {
+    return (
+      <div className="settings-stack">
+        <div className="settings-card" style={{ color: "var(--ink-soft)" }}>
+          Complete onboarding first to manage notifications.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="settings-stack">
       <div className="settings-card">
         <div className="settings-card__label">Notification toggles</div>
-        {items.map((item, i) => (
-          <div key={i} className="settings-notif-row">
-            <span className="settings-notif-label">{item.label}</span>
-            <div className={`settings-toggle${item.on ? " settings-toggle--on" : ""}`}>
-              <div className="settings-toggle__knob" />
+        {NOTIFICATION_ITEMS.map((item) => {
+          const value = profile[item.key];
+          return (
+            <div key={item.key} className="settings-notif-row">
+              <div>
+                <div className="settings-notif-label">{item.label}</div>
+                <div style={{ color: "var(--ink-soft)", fontSize: 12, marginTop: 2 }}>
+                  {item.description}
+                </div>
+              </div>
+              <button
+                type="button"
+                className={`settings-toggle${value ? " settings-toggle--on" : ""}`}
+                onClick={() => void toggle(item.key, !value)}
+                disabled={busy === item.key}
+                aria-label={`Toggle ${item.label}`}
+              >
+                <div className="settings-toggle__knob" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SubjectsTab() {
+  const [subjects, reload] = useSubjects();
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const setFamiliarity = async (id: number, level: SubjectFamiliarity | null) => {
+    if (!window.api?.subjectsSetFamiliarity) return;
+    setBusy(id);
+    try {
+      await window.api.subjectsSetFamiliarity(id, level);
+      await reload();
+      refreshAll();
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (subjects.length === 0) {
+    return (
+      <div className="settings-stack">
+        <div className="settings-card" style={{ color: "var(--ink-soft)" }}>
+          No subjects yet.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="settings-stack">
+      <div className="settings-card">
+        <div className="settings-card__label">Familiarity</div>
+        <div className="settings-card__hint" style={{ marginBottom: 12 }}>
+          How comfortable you are with each subject. Ally uses this to weight task estimates.
+        </div>
+        {subjects.map((s) => (
+          <div key={s.id} className="settings-notif-row" style={{ alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, display: "inline-block" }} />
+              <div>
+                <div className="settings-notif-label">{s.name}</div>
+                <div style={{ color: "var(--ink-soft)", fontSize: 12 }}>
+                  {s.educationLevel.replace("_", " ")}
+                </div>
+              </div>
+            </div>
+            <div className="settings-personality" style={{ flexWrap: "nowrap" }}>
+              {(["beginner", "familiar", "confident"] as SubjectFamiliarity[]).map((lvl) => (
+                <button
+                  type="button"
+                  key={lvl}
+                  className={`personality-opt${s.familiarity === lvl ? " personality-opt--active" : ""}`}
+                  onClick={() => void setFamiliarity(s.id, lvl)}
+                  disabled={busy === s.id}
+                  style={{ textTransform: "capitalize" }}
+                >
+                  {lvl}
+                </button>
+              ))}
             </div>
           </div>
         ))}
@@ -190,40 +230,72 @@ function NotificationsTab() {
   );
 }
 
-function AccountTab() {
+function DataTab() {
+  const [activity] = useActivityToday();
+  const [resetting, setResetting] = useState(false);
+
+  const resetPlanner = async () => {
+    if (!window.api?.plannerReset) return;
+    if (!confirm("Clear planner conversation history?")) return;
+    setResetting(true);
+    try {
+      await window.api.plannerReset();
+    } finally {
+      setResetting(false);
+    }
+  };
+
   return (
     <div className="settings-stack">
       <div className="settings-card">
-        <div className="settings-card__label">Account</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--sky)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontFamily: "var(--font-display)", fontWeight: 600, color: "var(--ink)" }}>C</div>
-          <div>
-            <div style={{ fontWeight: 500, fontSize: 15 }}>Charles</div>
-            <div style={{ fontSize: 13, color: "var(--ink-soft)" }}>charlesjoshuauy@gmail.com</div>
+        <div className="settings-card__label">Today</div>
+        {activity ? (
+          <div style={{ display: "flex", gap: 24, marginTop: 8 }}>
+            <div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 500 }}>
+                {activity.sessionsCompleted}
+              </div>
+              <div style={{ color: "var(--ink-soft)", fontSize: 12 }}>sessions</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 500 }}>
+                {activity.breaksUsed}
+              </div>
+              <div style={{ color: "var(--ink-soft)", fontSize: 12 }}>breaks taken</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 500 }}>
+                {activity.streakDays}
+              </div>
+              <div style={{ color: "var(--ink-soft)", fontSize: 12 }}>day streak</div>
+            </div>
           </div>
-        </div>
-        <button className="btn btn--sm" type="button">Edit profile</button>
+        ) : (
+          <div style={{ color: "var(--ink-soft)" }}>No activity yet today.</div>
+        )}
       </div>
+
       <div className="settings-card">
-        <div className="settings-card__label">Data</div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="btn btn--sm" type="button">Export data</button>
-          <button className="btn btn--sm" type="button" style={{ color: "#c0392b", borderColor: "#fca5a5" }}>Delete account</button>
+        <div className="settings-card__label">Planner conversation</div>
+        <div className="settings-card__hint" style={{ marginBottom: 12 }}>
+          Reset Ally's memory of your planner chat. Tasks and events you've already created stay.
         </div>
+        <button type="button" className="btn btn--sm" onClick={() => void resetPlanner()} disabled={resetting}>
+          {resetting ? "Working…" : "Clear conversation"}
+        </button>
       </div>
     </div>
   );
 }
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<SettingsTab>("schedule");
+  const [tab, setTab] = useState<SettingsTab>("profile");
 
   const TABS: { id: SettingsTab; label: string }[] = [
-    { id: "schedule",      label: "Schedule"      },
-    { id: "distractions",  label: "Distractions"  },
-    { id: "ally",          label: "Ally"          },
+    { id: "profile", label: "Profile" },
     { id: "notifications", label: "Notifications" },
-    { id: "account",       label: "Account"       },
+    { id: "subjects", label: "Subjects" },
+    { id: "data", label: "Activity" },
   ];
 
   return (
@@ -236,10 +308,10 @@ export function SettingsPage() {
       </div>
 
       <div className="settings-tabs">
-        {TABS.map(t => (
+        {TABS.map((t) => (
           <button
-            key={t.id}
             type="button"
+            key={t.id}
             className={`settings-tab${tab === t.id ? " settings-tab--active" : ""}`}
             onClick={() => setTab(t.id)}
           >
@@ -248,11 +320,10 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {tab === "schedule"      && <ScheduleTab />}
-      {tab === "distractions"  && <DistractionsTab />}
-      {tab === "ally"          && <AllyTab />}
+      {tab === "profile" && <ProfileTab />}
       {tab === "notifications" && <NotificationsTab />}
-      {tab === "account"       && <AccountTab />}
+      {tab === "subjects" && <SubjectsTab />}
+      {tab === "data" && <DataTab />}
     </div>
   );
 }

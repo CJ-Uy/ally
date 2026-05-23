@@ -186,7 +186,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
       <div className="onb__paper">
         <header className="onb__head">
           <div className="onb__brand">
-            <span className="onb__mark">A</span>
+            <img src="/ally.png" alt="Ally" className="onb__brand-img" />
             <span className="onb__brandtext">Ally</span>
           </div>
           <div className="onb__progress">
@@ -202,10 +202,18 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         <div className="onb__stage">
           {step === "intro" && (
             <section className="onb__panel">
-              <p className="eyebrow">A study companion</p>
-              <h1 className="display onb__title">
-                Let's plan your <em>semester</em>.
-              </h1>
+              <div className="onb__intro">
+                <img src="/ally.png" alt="Ally" className="onb__hero-img" />
+                <div>
+                  <p className="eyebrow">A study companion</p>
+                  <h1 className="display onb__title">
+                    Let's plan your <em>semester</em>.
+                  </h1>
+                  <svg width={120} height={8} viewBox="0 0 80 8" style={{ display: "block", marginBottom: 12 }}>
+                    <path d="M2 5 Q 10 1, 20 4 T 40 4 T 60 4 T 78 4" stroke="var(--accent)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
               <p className="onb__lede">
                 Drop in your syllabi and Ally will read them, pull out every
                 deadline and exam, and assemble a calendar you can actually
@@ -534,6 +542,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
 
           {step === "done" && (
             <section className="onb__panel onb__panel--centered">
+              <img src="/ally.png" alt="Ally" className="onb__done-img" />
               <p className="eyebrow">All set</p>
               <h2 className="display onb__title onb__title--mid">
                 Your plan is saved.
