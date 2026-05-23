@@ -1,142 +1,198 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
-import { SessionPanel } from "./session/SessionPanel";
+import { CalendarPage } from "./pages/CalendarPage";
+import { SubjectsPage } from "./pages/SubjectsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
-type R2Object = { key: string; size: number; etag?: string };
+type Page = "dashboard" | "calendar" | "subjects" | "settings";
 
-function App() {
-  const [ping, setPing] = useState("idle");
-  const [dbStatus, setDbStatus] = useState<"idle" | "ok" | "error">("idle");
-  const [r2Objects, setR2Objects] = useState<R2Object[]>([]);
-  const [prefix, setPrefix] = useState("");
-  const [error, setError] = useState<string | null>(null);
+function formatMmSs(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
 
-  const handlePing = async () => {
-    setError(null);
-    try {
-      const result = await window.api.ping();
-      setPing(result);
-    } catch (err) {
-      setPing("error");
-      setError(err instanceof Error ? err.message : "Ping failed");
-    }
+const TASKS = [
+  { subject: "Linear Algebra", title: "Practice problems Ch. 4", done: false },
+  { subject: "History",        title: "Read Module 3",            done: true  },
+  { subject: "Spanish",        title: "Vocab review",             done: false },
+  { subject: "Essay",          title: "First draft",              done: false },
+];
+
+const NAV_ITEMS: { id: Page | "history"; label: string }[] = [
+  { id: "dashboard", label: "Today" },
+  { id: "calendar",  label: "Calendar" },
+  { id: "subjects",  label: "Subjects" },
+  { id: "history",   label: "History" },
+  { id: "settings",  label: "Settings" },
+];
+
+function Squiggle({ color, width = 80 }: { color: string; width?: number }) {
+  return (
+    <svg width={width} height={8} viewBox="0 0 80 8">
+      <path d="M2 5 Q 10 1, 20 4 T 40 4 T 60 4 T 78 4"
+        stroke={color} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DashboardPage({ snap, onToggle }: { snap: SessionStateSnapshot | null; onToggle: () => void }) {
+  const sessionActive = snap?.session.active ?? false;
+  const breakActive   = snap?.break.active   ?? false;
+  const paused        = snap?.session.paused  ?? false;
+
+  const elapsedMs    = snap?.session.elapsedMs  ?? 0;
+  const breakMs      = snap?.break.msRemaining  ?? 0;
+  const timerDisplay = breakActive ? formatMmSs(breakMs) : formatMmSs(elapsedMs);
+
+  let statusLabel  = "Focused";
+  let stickerClass = "sticker sticker--sage";
+  if (breakActive)      { statusLabel = "On break"; }
+  else if (paused)      { statusLabel = "Paused — negotiating"; stickerClass = "sticker sticker--blush"; }
+
+  if (!sessionActive) {
+    return (
+      <div className="idle-hero">
+        <img src="/ally.png" alt="Ally" className="idle-hero__ally" />
+        <h2 className="idle-hero__heading">Hey there,<br />ready when you are.</h2>
+        <Squiggle color="var(--accent)" width={120} />
+        <p className="idle-hero__sub">
+          I'll keep the noisy stuff out of your way until you're done.
+        </p>
+        <button className="btn btn--primary" type="button" onClick={onToggle}>
+          Start study session →
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="workspace__header">
+        <div>
+          <div className="workspace__meta">
+            {breakActive ? "Break · Linear Algebra" : "Session · Linear Algebra"}
+          </div>
+          <div className="workspace__timer">{timerDisplay}</div>
+          <div className="workspace__status">
+            <span className={stickerClass}>{statusLabel}</span>
+            <span className="sticker sticker--panel">0 breaks today</span>
+          </div>
+        </div>
+        <div className="workspace__actions">
+          <button className="btn" type="button" onClick={onToggle}>End session</button>
+        </div>
+      </div>
+
+      <div className="card card--accent">
+        <div className="card__title">What you're working on</div>
+        <div className="card__body">
+          Practice problems Ch. 4 — eigenvalues. You got through 6 of 12 yesterday.
+        </div>
+      </div>
+
+      <div className="stats-grid">
+        <div className="card">
+          <div className="card__label">Streak</div>
+          <div className="card__value">4<span className="card__value-unit">days</span></div>
+          <div className="streak-dots">
+            {[1,1,1,1,0,0,0].map((on, i) => (
+              <div key={i} className={`streak-dot streak-dot--${on ? "on" : "off"}`} />
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <div className="card__label">This week</div>
+          <div className="card__value">14h 22m</div>
+          <div className="card__sub">+2h vs. goal</div>
+        </div>
+        <div className="card">
+          <div className="card__label">Blocked today</div>
+          <div className="card__value">3</div>
+          <div className="card__sub">TikTok · YouTube · Reddit</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function App() {
+  const [snap, setSnap]   = useState<SessionStateSnapshot | null>(null);
+  const [page, setPage]   = useState<Page>("dashboard");
+
+  useEffect(() => {
+    if (!window.api?.sessionGetState) return;
+    void window.api.sessionGetState().then(setSnap);
+    return window.api.onStateUpdate(setSnap);
+  }, []);
+
+  const toggle = () => {
+    if (!window.api?.sessionStart) return;
+    if (snap?.session.active) void window.api.sessionStop();
+    else                      void window.api.sessionStart();
   };
 
-  const handleDbHealth = async () => {
-    setError(null);
-    try {
-      await window.api.dbHealth();
-      setDbStatus("ok");
-    } catch (err) {
-      setDbStatus("error");
-      setError(err instanceof Error ? err.message : "DB check failed");
-    }
-  };
-
-  const handleR2List = async () => {
-    setError(null);
-    try {
-      const result = await window.api.r2List(prefix || undefined);
-      setR2Objects(result.objects);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "R2 list failed");
-    }
+  const goTo = (id: string) => {
+    if (id === "history") return; // stub — future feature
+    setPage(id as Page);
   };
 
   return (
     <div className="app-shell">
+      {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand__mark">A</span>
-          <span>Ally</span>
+          <img src="/ally.png" alt="Ally" className="brand__ally" />
+          <span className="brand__name">Ally</span>
         </div>
-        <nav className="nav">
-          <button className="nav__item nav__item--active" type="button">
-            Dashboard
-          </button>
-          <button className="nav__item" type="button">
-            Files
-          </button>
-          <button className="nav__item" type="button">
-            Sync
-          </button>
+
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={`sidebar-nav__item${page === id ? " sidebar-nav__item--active" : ""}${id === "history" ? " sidebar-nav__item--disabled" : ""}`}
+              onClick={() => goTo(id)}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
+
+        {page === "dashboard" && (
+          <>
+            <div className="sidebar__label">Today</div>
+            <ul className="task-list">
+              {TASKS.map((task, i) => (
+                <li key={i} className={`task-item${task.done ? " task-item--done" : ""}`}>
+                  <div className={`task-item__check${task.done ? " task-item__check--done" : ""}`} />
+                  <div>
+                    <div className="task-item__title">{task.title}</div>
+                    <div className="task-item__subject">{task.subject}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="sidebar__upcoming">
+          <div className="sidebar__upcoming-label">Upcoming</div>
+          <div className="sidebar__upcoming-event">Linear Algebra exam</div>
+          <div style={{ color: "var(--fox)", fontSize: 12, marginTop: 2 }}>in 6 days</div>
+        </div>
       </aside>
 
+      {/* ── Main ── */}
       <main className="workspace">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Electron window mock</p>
-            <h1>Ally Desktop</h1>
-          </div>
-          <span className="badge">Dev build</span>
-        </header>
-
-        <section className="hero-panel">
-          <div>
-            <p className="eyebrow">Native shell is running</p>
-            <h2>This is the desktop app window.</h2>
-            <p>
-              React is rendering inside Electron. These controls talk to the
-              preload bridge.
-            </p>
-          </div>
-          <div className="signal">
-            <span>Window</span>
-            <strong>Open</strong>
-          </div>
-        </section>
-
-        <div className="panel-grid">
-          <SessionPanel />
-
-          <section className="panel">
-            <h3>Health Checks</h3>
-            <div className="app__actions">
-              <button type="button" onClick={handlePing}>
-                Ping Electron
-              </button>
-              <button type="button" onClick={handleDbHealth}>
-                Check DB
-              </button>
-            </div>
-            <div className="status-row">
-              <span>Ping: {ping}</span>
-              <span>DB: {dbStatus}</span>
-            </div>
-          </section>
-
-          <section className="panel">
-            <h3>R2 Objects</h3>
-            <div className="app__actions">
-              <input
-                value={prefix}
-                onChange={(event) => setPrefix(event.target.value)}
-                placeholder="Prefix (optional)"
-              />
-              <button type="button" onClick={handleR2List}>
-                List
-              </button>
-            </div>
-            <ul className="app__list">
-              {r2Objects.length === 0 ? (
-                <li className="app__muted">No objects loaded</li>
-              ) : (
-                r2Objects.map((obj) => (
-                  <li key={obj.key}>
-                    <span>{obj.key}</span>
-                    <span className="app__muted">{obj.size} bytes</span>
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
-        </div>
-
-        {error ? <p className="app__error">{error}</p> : null}
+        {page === "dashboard" && <DashboardPage snap={snap} onToggle={toggle} />}
+        {page === "calendar"  && <CalendarPage />}
+        {page === "subjects"  && <SubjectsPage />}
+        {page === "settings"  && <SettingsPage />}
       </main>
     </div>
   );
 }
-
-export default App;
