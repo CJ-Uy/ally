@@ -31,6 +31,7 @@ import {
   type EventType,
 } from "../data/events";
 import { analyzeAtRiskTasks, rankNextTasks } from "../data/analysis";
+import { modelFor } from "./models";
 
 export const studyPlannerAgent = {
   name: "Study Planner",
@@ -73,8 +74,6 @@ If a tool call fails, tell the user what went wrong in plain English. Don't retr
   },
   triggers: ["on_planner_chat_message"],
 } as const;
-
-const PLANNER_MODEL = "gemini-2.5-flash";
 
 let client: GoogleGenerativeAI | null = null;
 function getClient(): GoogleGenerativeAI {
@@ -726,7 +725,7 @@ export async function sendToPlanner(
   console.log(`[planner] history length: ${history.length}`);
 
   const model = getClient().getGenerativeModel({
-    model: PLANNER_MODEL,
+    model: modelFor("planner"),
     systemInstruction,
     tools: [{ functionDeclarations: tools }],
     toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } },

@@ -3,6 +3,7 @@ import { getSubject, type SubjectFamiliarity } from "../data/subjects";
 import { db } from "../db";
 import { syllabi } from "../../src/lib/schema";
 import { eq, desc } from "drizzle-orm";
+import { modelFor } from "./models";
 
 export const preTestAgent = {
   name: "Pre-Test Author",
@@ -36,8 +37,6 @@ Output shape:
   },
   triggers: ["on_pretest_request"],
 } as const;
-
-const MODEL = "gemini-2.5-flash";
 
 let client: GoogleGenerativeAI | null = null;
 function getClient(): GoogleGenerativeAI {
@@ -142,7 +141,7 @@ export async function generatePreTest(subjectId: number): Promise<PreTestPayload
   );
 
   const model = getClient().getGenerativeModel({
-    model: MODEL,
+    model: modelFor("pretest"),
     systemInstruction: preTestAgent.instructions,
     generationConfig: { responseMimeType: "application/json" },
   });

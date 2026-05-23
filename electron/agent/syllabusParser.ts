@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { modelFor } from "./models";
 
 export const syllabusParserAgent = {
   name: "Syllabus Parser",
@@ -50,8 +51,6 @@ Return ONLY a JSON object in this exact shape, with no prose, no markdown fences
   },
   triggers: ["on_subject_syllabus_upload"],
 } as const;
-
-const PARSER_MODEL = "gemini-2.5-flash";
 
 let client: GoogleGenerativeAI | null = null;
 function getClient(): GoogleGenerativeAI {
@@ -111,7 +110,7 @@ export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus
   console.log(`[syllabus] PDF size: ${Math.round(base64.length / 1024)} KB (base64)`);
 
   const model = getClient().getGenerativeModel({
-    model: PARSER_MODEL,
+    model: modelFor("parser"),
     systemInstruction: syllabusParserAgent.instructions,
     generationConfig: {
       responseMimeType: "application/json",
