@@ -1,7 +1,9 @@
 .atrisk {
-  border-color: var(--terra);
-  background: linear-gradient(0deg, rgba(199, 82, 42, 0.04), rgba(199, 82, 42, 0.04)),
-    var(--card);
+  border-color: var(--fox);
+  background: linear-gradient(0deg, rgba(245, 166, 107, 0.06), rgba(245, 166, 107, 0.06)),
+    var(--panel);
+  background-image: var(--paper-svg);
+  background-blend-mode: multiply;
 }
 
 .atrisk__list {
@@ -18,7 +20,7 @@
   align-items: center;
   gap: 14px;
   padding: 12px 4px;
-  border-bottom: 1px dashed var(--line-soft);
+  border-bottom: 1px dashed var(--line);
 }
 .atrisk__item:last-child {
   border-bottom: 0;
@@ -32,8 +34,9 @@
 
 .atrisk__title {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.15rem;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   color: var(--ink);
   line-height: 1.2;
 }
@@ -43,13 +46,13 @@
   gap: 12px;
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
-  letter-spacing: 0.04em;
-  color: var(--ink-mute);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
 }
 
 .atrisk__reason {
-  color: var(--terra-deep);
+  color: #c2570a;
 }
 
 .atrisk__actions {
@@ -66,7 +69,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   grid-template-rows: auto auto;
-  gap: 18px;
+  gap: 16px;
 }
 
 .today__main {
@@ -80,20 +83,21 @@
 }
 .today__metric-num {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 2.2rem;
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
   line-height: 1;
   color: var(--ink);
 }
 .today__metric-lbl {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.18em;
-  color: var(--ink-mute);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
   text-transform: uppercase;
 }
 .today__metric--alert .today__metric-num {
-  color: var(--terra-deep);
+  color: #c2570a;
 }
 
 .today__list {
@@ -101,7 +105,7 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .today__item {
@@ -109,51 +113,53 @@
   grid-template-columns: 28px 1fr auto;
   align-items: center;
   gap: 14px;
-  padding: 14px 6px;
-  border-bottom: 1px dashed var(--line-soft);
-  transition: background 0.18s ease;
+  padding: 12px 6px;
+  border-bottom: 1px dashed var(--line);
+  border-radius: 8px;
+  transition: background 0.15s ease;
 }
 .today__item:hover {
-  background: var(--paper-deep);
+  background: var(--bg);
 }
 .today__item:last-child {
   border-bottom: 0;
 }
 .today__item.is-overdue .today__title {
-  color: var(--terra-deep);
+  color: #c2570a;
 }
 
 .today__check {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--line);
   background: transparent;
   color: transparent;
   padding: 0;
-  font-size: 0.9rem;
-  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 0.8rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: none;
 }
 .today__check:hover {
-  background: var(--terra);
-  border-color: var(--terra);
-  color: #fff;
+  background: var(--sage);
+  border-color: var(--sage);
+  color: var(--ink);
   transform: none;
   box-shadow: none;
 }
 
 .today__body {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .today__title {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.2rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--ink);
-  line-height: 1.2;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -161,16 +167,16 @@
 
 .today__meta {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
-  color: var(--ink-mute);
-  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
 }
 
 .today__est {
-  color: var(--ink-faint);
+  opacity: 0.7;
 }
 
 .today__when {
@@ -181,19 +187,19 @@
 
 .today__badge {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.18em;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
   color: #fff;
-  background: var(--terra-deep);
-  padding: 0.18rem 0.5rem;
+  background: #c2570a;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
   text-transform: uppercase;
 }
 
 .today__time {
   font-family: var(--font-mono);
-  font-size: 0.82rem;
-  color: var(--ink-mute);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
 }
 
 .today__none {
@@ -202,15 +208,16 @@
 }
 .today__none-title {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--ink);
   margin: 0 0 6px;
 }
 .today__none-sub {
   margin: 0;
-  color: var(--ink-mute);
-  font-size: 0.9rem;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
 }
 
 .today__cal {
@@ -218,16 +225,16 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .today__calitem {
   display: grid;
-  grid-template-columns: 70px 10px 1fr auto;
+  grid-template-columns: 68px 10px 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px dotted var(--line-soft);
+  border-bottom: 1px dotted var(--line);
 }
 .today__calitem:last-child {
   border-bottom: 0;
@@ -235,7 +242,7 @@
 
 .today__caltime {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--ink-soft);
 }
 
@@ -243,50 +250,55 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: var(--ink-soft);
 }
 
 .today__caltitle {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.05rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .today__caltype {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.18em;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
 }
-.today__caltype--exam { background: rgba(141, 58, 28, 0.14); color: var(--terra-deep); }
-.today__caltype--class { background: rgba(44, 62, 110, 0.14); color: var(--indigo); }
-.today__caltype--deadline { background: rgba(184, 148, 86, 0.18); color: var(--honey); }
-.today__caltype--study_block { background: rgba(91, 116, 86, 0.16); color: var(--moss); }
+.today__caltype--exam    { background: rgba(245, 166, 107, 0.25); color: #a35714; }
+.today__caltype--class   { background: var(--sky); color: var(--ink); }
+.today__caltype--deadline { background: var(--butter); color: var(--ink); }
+.today__caltype--study_block { background: var(--sage); color: var(--ink); }
 
 .today__exam-list {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .today__exam {
   display: grid;
-  grid-template-columns: 56px 1fr;
-  gap: 14px;
-  padding: 10px 0;
-  border-bottom: 1px dotted var(--line-soft);
+  grid-template-columns: 52px 1fr;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dotted var(--line);
 }
 .today__exam:last-child {
   border-bottom: 0;
 }
 
 .today__exam-dateblock {
-  background: var(--paper-deep);
-  border: 1px solid var(--line-soft);
-  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
   padding: 8px 4px;
   text-align: center;
   display: grid;
@@ -294,15 +306,17 @@
 }
 .today__exam-day {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   line-height: 1;
+  color: var(--ink);
 }
 .today__exam-month {
   font-family: var(--font-mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  color: var(--ink-mute);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
 }
 
 .today__exam-body {
@@ -311,29 +325,31 @@
   align-content: center;
 }
 .today__exam-title {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
 }
 .today__exam-meta {
   display: flex;
   justify-content: space-between;
   gap: 8px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--ink-mute);
-  letter-spacing: 0.04em;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
 }
 .today__exam-rel {
-  color: var(--terra-deep);
+  color: var(--accent);
 }
 
 .today__quiet {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--ink-faint);
+  font-size: 0.74rem;
+  color: var(--ink-soft);
   margin: 0;
   padding: 12px 4px;
+  opacity: 0.8;
 }
 
 @media (max-width: 1100px) {

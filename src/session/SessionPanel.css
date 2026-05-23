@@ -1,59 +1,69 @@
 .session-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .session-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .session-state {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  text-transform: uppercase;
 }
 
 .session-state::before {
   content: "";
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: currentColor;
+  flex-shrink: 0;
 }
 
 .session-state--idle {
-  background: rgba(107, 114, 128, 0.12);
-  color: #4b5563;
+  background: var(--bg);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
 }
 
 .session-state--studying {
-  background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
+  background: rgba(245, 166, 107, 0.2);
+  color: #a35714;
+  border: 1px solid rgba(245, 166, 107, 0.4);
 }
 
 .session-state--paused {
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
+  background: rgba(240, 224, 181, 0.3);
+  color: #8a6a1a;
+  border: 1px solid var(--butter);
 }
 
 .session-state--break {
-  background: rgba(16, 185, 129, 0.14);
-  color: #047857;
+  background: rgba(184, 208, 196, 0.3);
+  color: #3d6b55;
+  border: 1px solid var(--sage);
 }
 
 .session-elapsed {
   font-variant-numeric: tabular-nums;
-  font-size: 22px;
-  font-weight: 600;
-  color: #111827;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
 .session-toggle {
@@ -62,7 +72,10 @@
 
 .session-hint {
   margin: 0;
-  font-size: 12px;
-  color: #6b7280;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
   line-height: 1.5;
+  opacity: 0.8;
 }

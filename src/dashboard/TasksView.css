@@ -1,24 +1,25 @@
 .tasks {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .tasks__metric {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--ink);
 }
 .tasks__metric strong {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.4rem;
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   margin-right: 4px;
 }
 .tasks__metric--mute {
-  color: var(--ink-mute);
+  color: var(--ink-soft);
 }
 .tasks__metric--mute strong {
-  color: var(--ink-mute);
+  color: var(--ink-soft);
 }
 
 .tasks__toggle {
@@ -26,9 +27,9 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  color: var(--ink-mute);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
   cursor: pointer;
   text-transform: uppercase;
 }
@@ -40,10 +41,13 @@
 }
 
 .tasks__group {
-  background: var(--card);
-  border: 1px solid var(--line-soft);
-  border-radius: 4px;
+  background: var(--panel);
+  background-image: var(--paper-svg);
+  background-blend-mode: multiply;
+  border: 1px solid var(--line);
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: 0 1px 0 rgba(30, 42, 61, 0.02), 0 4px 12px rgba(30, 42, 61, 0.04);
 }
 
 .tasks__grouphead {
@@ -51,16 +55,16 @@
   grid-template-columns: 14px 1fr auto auto;
   align-items: center;
   gap: 12px;
-  padding: 14px 18px 14px 22px;
+  padding: 14px 18px 14px 20px;
   cursor: pointer;
   border-left: 4px solid;
-  border-bottom: 1px dashed var(--line-soft);
+  border-bottom: 1px solid var(--line);
   user-select: none;
-  background: var(--card);
-  transition: background 0.18s ease;
+  background: var(--panel);
+  transition: background 0.15s ease;
 }
 .tasks__grouphead:hover {
-  background: var(--paper-deep);
+  background: var(--bg);
 }
 
 .tasks__groupdot {
@@ -72,26 +76,30 @@
 
 .tasks__groupname {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.6rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   margin: 0;
   line-height: 1;
+  color: var(--ink);
 }
 
 .tasks__groupcount {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
   color: var(--ink-soft);
 }
 .tasks__groupcount span {
-  color: var(--ink-mute);
+  color: var(--ink-soft);
+  opacity: 0.7;
   margin-left: 4px;
 }
 
 .tasks__caret {
   font-family: var(--font-mono);
-  color: var(--ink-mute);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
 }
 
 .tasks__list {
@@ -105,42 +113,44 @@
   grid-template-columns: 28px 1fr auto;
   align-items: center;
   gap: 14px;
-  padding: 12px 22px;
-  border-bottom: 1px dotted var(--line-soft);
-  transition: background 0.15s ease;
+  padding: 12px 20px;
+  border-bottom: 1px dotted var(--line);
+  transition: background 0.12s ease;
 }
 .tasks__row:hover {
-  background: var(--paper-deep);
+  background: var(--bg);
 }
 .tasks__row:last-child {
   border-bottom: 0;
 }
 .tasks__row.is-done .tasks__title {
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   text-decoration: line-through;
+  opacity: 0.7;
 }
 
 .tasks__check {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 1.5px solid var(--ink);
+  border: 1.5px solid var(--line);
   background: transparent;
   padding: 0;
   color: transparent;
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
+  box-shadow: none;
 }
 .tasks__check:hover {
-  background: var(--terra);
-  border-color: var(--terra);
-  color: #fff;
+  background: var(--sage);
+  border-color: var(--sage);
+  color: var(--ink);
   transform: none;
   box-shadow: none;
 }
 .tasks__row.is-done .tasks__check {
-  background: var(--moss);
-  border-color: var(--moss);
-  color: #fff;
+  background: var(--sage);
+  border-color: var(--sage);
+  color: var(--ink);
 }
 
 .tasks__body {
@@ -150,10 +160,10 @@
 }
 
 .tasks__title {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.2rem;
-  line-height: 1.2;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.3;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -164,57 +174,69 @@
   display: flex;
   gap: 10px;
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--ink-mute);
+  font-size: 0.68rem;
+  color: var(--ink-soft);
 }
 
 .tasks__ai {
-  background: rgba(199, 82, 42, 0.14);
-  color: var(--terra-deep);
+  background: rgba(202, 221, 236, 0.5);
+  color: var(--accent);
   padding: 1px 6px;
-  border-radius: 3px;
-  letter-spacing: 0.12em;
+  border-radius: 4px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
 }
 
 .tasks__actions {
   display: flex;
   gap: 4px;
   opacity: 0;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.15s ease;
 }
 .tasks__row:hover .tasks__actions {
   opacity: 1;
 }
 
 .tasks__icon {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border-radius: 50%;
   border: 1px solid transparent;
-  color: var(--ink-mute);
+  color: var(--ink-soft);
   background: transparent;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  box-shadow: none;
 }
 .tasks__icon:hover {
   border-color: var(--line);
-  color: var(--terra-deep);
-  background: var(--card);
+  color: var(--ink);
+  background: var(--bg);
+  transform: none;
+  box-shadow: none;
 }
 
 .tasks__addtrigger {
-  padding: 8px 22px 12px;
+  padding: 8px 20px 12px;
 }
 .tasks__addtrigger button {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--ink-mute);
-  letter-spacing: 0.06em;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
   background: transparent;
   border: 1px dashed var(--line);
   padding: 6px 12px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.tasks__addtrigger button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: transparent;
+  transform: none;
+  box-shadow: none;
 }
 
 .tasks__addrow {
@@ -232,11 +254,12 @@
 }
 
 .tasks__none {
-  padding: 18px 22px;
+  padding: 16px 20px;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--ink-faint);
-  letter-spacing: 0.04em;
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  opacity: 0.8;
 }
 
 @media (max-width: 720px) {

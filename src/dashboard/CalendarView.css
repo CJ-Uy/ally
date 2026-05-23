@@ -1,25 +1,26 @@
 .cal {
   padding: 0;
   border: 1px solid var(--line);
+  border-radius: 14px;
   overflow: hidden;
 }
 
 .cal__weekdays {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  background: var(--paper-deep);
+  background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
 .cal__weekday {
   padding: 10px 12px;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
-  color: var(--ink-mute);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--ink-soft);
   text-transform: uppercase;
   text-align: left;
-  border-right: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line);
 }
 .cal__weekday:last-child {
   border-right: 0;
@@ -38,25 +39,25 @@
 }
 
 .cal__cell {
-  border-right: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   padding: 8px 10px;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 6px;
-  background: var(--card);
+  background: var(--panel);
   min-height: 0;
-  transition: background 0.18s ease;
+  transition: background 0.15s ease;
 }
 .cal__cell:hover {
-  background: var(--paper-deep);
+  background: var(--bg);
 }
 .cal__cell.is-other {
-  background: var(--paper);
-  color: var(--ink-faint);
+  background: var(--bg);
+  opacity: 0.6;
 }
 .cal__cell.is-today {
-  background: rgba(199, 82, 42, 0.06);
+  background: rgba(202, 221, 236, 0.25);
   position: relative;
 }
 
@@ -68,25 +69,26 @@
 }
 
 .cal__cell-day {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.05rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--ink);
 }
 .cal__cell.is-other .cal__cell-day {
-  color: var(--ink-faint);
+  color: var(--ink-soft);
+  opacity: 0.6;
 }
 .cal__cell.is-today .cal__cell-day {
-  color: var(--terra-deep);
+  color: var(--fox);
   font-weight: 600;
 }
 
 .cal__today-pill {
   font-family: var(--font-mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.18em;
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  background: var(--terra-deep);
+  background: var(--fox);
   color: #fff;
   padding: 1px 6px;
   border-radius: 999px;
@@ -102,11 +104,11 @@
 }
 
 .cal__item {
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   border-left: 3px solid;
   padding: 2px 6px;
-  background: var(--paper-deep);
-  border-radius: 2px;
+  background: var(--bg);
+  border-radius: 4px;
   color: var(--ink-soft);
   overflow: hidden;
 }
@@ -120,33 +122,38 @@
 }
 
 .cal__item--exam {
-  background: rgba(141, 58, 28, 0.12);
-  color: var(--terra-deep);
+  background: rgba(245, 166, 107, 0.2);
+  color: #a35714;
   font-weight: 500;
 }
 .cal__item--class {
-  background: rgba(44, 62, 110, 0.1);
+  background: rgba(202, 221, 236, 0.4);
+  color: var(--ink);
 }
 .cal__item--deadline {
-  background: rgba(184, 148, 86, 0.16);
+  background: rgba(240, 224, 181, 0.4);
+  color: var(--ink);
 }
 .cal__item--study_block {
-  background: rgba(91, 116, 86, 0.14);
+  background: rgba(184, 208, 196, 0.4);
+  color: var(--ink);
 }
 .cal__item--task {
-  background: var(--paper-deep);
+  background: var(--bg);
+  color: var(--ink-soft);
 }
 
 .cal__more {
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  color: var(--ink-mute);
+  font-size: 0.62rem;
+  color: var(--ink-soft);
   padding-left: 3px;
+  opacity: 0.8;
 }
 
 .cal__modes {
   display: inline-flex;
-  background: var(--paper-deep);
+  background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 2px;
@@ -155,11 +162,12 @@
   background: transparent;
   color: var(--ink-soft);
   border: 0;
-  padding: 0.3rem 0.85rem;
+  padding: 0.28rem 0.8rem;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
   border-radius: 999px;
+  box-shadow: none;
 }
 .cal__mode:hover {
   background: transparent;
@@ -168,6 +176,8 @@
   box-shadow: none;
 }
 .cal__mode.is-active {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }

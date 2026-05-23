@@ -3,7 +3,7 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .settings__row {
@@ -11,32 +11,33 @@
   justify-content: space-between;
   align-items: center;
   gap: 24px;
-  padding: 12px 4px;
-  border-bottom: 1px dotted var(--line-soft);
+  padding: 10px 4px;
+  border-bottom: 1px dotted var(--line);
 }
 .settings__row:last-child {
   border-bottom: 0;
 }
 
 .settings__rowtitle {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--ink);
 }
 
 .settings__rowhint {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--ink-mute);
-  letter-spacing: 0.02em;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.01em;
   margin-top: 3px;
   max-width: 380px;
+  line-height: 1.5;
 }
 
 .settings__switch {
   position: relative;
-  width: 44px;
+  width: 42px;
   height: 24px;
   cursor: pointer;
   flex-shrink: 0;
@@ -60,52 +61,56 @@
   height: 18px;
   left: 3px;
   top: 3px;
-  background: var(--paper);
+  background: var(--panel);
   border-radius: 50%;
   transition: transform 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 .settings__switch input:checked + .settings__slider {
-  background: var(--terra);
+  background: var(--accent);
 }
 .settings__switch input:checked + .settings__slider::before {
-  transform: translateX(20px);
+  transform: translateX(18px);
 }
 
 .settings__quiet {
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  color: var(--ink-mute);
+  font-size: 0.74rem;
+  color: var(--ink-soft);
   padding: 4px 0;
 }
 
 .settings__streak {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .settings__streakblock {
   display: grid;
   gap: 4px;
   padding: 14px 12px;
-  border: 1px dashed var(--line);
-  border-radius: 4px;
-  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  background-image: var(--paper-svg);
+  background-blend-mode: multiply;
   text-align: center;
 }
 
 .settings__streaknum {
   font-family: var(--font-display);
-  font-style: italic;
-  font-size: 2.2rem;
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
   color: var(--ink);
 }
 
 .settings__streaklbl {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.16em;
-  color: var(--ink-mute);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
   text-transform: uppercase;
 }
 
@@ -114,16 +119,16 @@
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .settings__subject {
   display: grid;
-  grid-template-columns: 16px 1fr auto auto;
+  grid-template-columns: 14px 1fr auto auto;
   gap: 12px;
   align-items: center;
   padding: 10px 4px;
-  border-bottom: 1px dotted var(--line-soft);
+  border-bottom: 1px dotted var(--line);
 }
 .settings__subject:last-child {
   border-bottom: 0;
@@ -136,38 +141,39 @@
 }
 
 .settings__subjname {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.05rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--ink);
 }
 
 .settings__fam {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 4px 8px;
-  border-radius: 2px;
+  padding: 3px 8px;
+  border-radius: 999px;
   border: 1px solid var(--line);
 }
 .settings__fam.is-beginner {
-  color: var(--terra-deep);
-  border-color: var(--terra);
-  background: rgba(199, 82, 42, 0.08);
+  color: #a35714;
+  border-color: var(--butter);
+  background: rgba(240, 224, 181, 0.4);
 }
 .settings__fam.is-familiar {
   color: var(--ink);
-  border-color: var(--ink-mute);
-  background: var(--card);
+  border-color: var(--sky);
+  background: rgba(202, 221, 236, 0.3);
 }
 .settings__fam.is-confident {
-  color: #2d5b3a;
-  border-color: #5e8a6b;
-  background: rgba(94, 138, 107, 0.1);
+  color: var(--ink);
+  border-color: var(--sage);
+  background: rgba(184, 208, 196, 0.4);
 }
 .settings__fam.is-unknown {
-  color: var(--ink-faint);
+  color: var(--ink-soft);
+  opacity: 0.7;
 }
 
 .settings__retest {
