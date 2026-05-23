@@ -1,7 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { agentConfig } from "./config";
 import { buildLiveContext, formatContext, readMockContext } from "./context";
-import { modelFor } from "./models";
+import { chat as llmChat } from "./llm";
 import type { ChatMessage } from "../session";
 import { clampMinutes } from "../session";
 
@@ -15,18 +14,6 @@ export interface AgentDecision {
 export interface AgentReply {
   visibleText: string;
   decision?: AgentDecision;
-}
-
-let client: GoogleGenerativeAI | null = null;
-
-function getClient(): GoogleGenerativeAI {
-  if (client) return client;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not set");
-  }
-  client = new GoogleGenerativeAI(apiKey);
-  return client;
 }
 
 function parseDecision(text: string): { stripped: string; decision?: AgentDecision } {
@@ -63,7 +50,7 @@ async function loadContextBlock(): Promise<string> {
     const live = await buildLiveContext();
     return formatContext(live);
   } catch (err) {
-    console.warn("[gemini] live context failed, falling back to mock:", err);
+    console.warn("[agent] live context failed, falling back to mock:", err);
     return formatContext(readMockContext());
   }
 }
@@ -76,20 +63,13 @@ export async function sendToAgent(
     const contextBlock = await loadContextBlock();
     const systemInstruction = `${agentConfig.instructions}\n\n${contextBlock}`;
 
-    const model = getClient().getGenerativeModel({
-      model: modelFor("negotiation"),
-      systemInstruction,
+    const { text, provider } = await llmChat({
+      slot: "negotiation",
+      system: systemInstruction,
+      history,
+      message: userMessage,
     });
-
-    const chat = model.startChat({
-      history: history.map((m) => ({
-        role: m.role,
-        parts: [{ text: m.text }],
-      })),
-    });
-
-    const result = await chat.sendMessage(userMessage);
-    const text = result.response.text();
+    console.log(`[agent] reply via ${provider}`);
     const { stripped, decision } = parseDecision(text);
 
     return {
@@ -97,7 +77,7 @@ export async function sendToAgent(
       decision,
     };
   } catch (err) {
-    console.error("[gemini] error:", err);
+    console.error("[agent] error:", err);
     return {
       visibleText: "Agent unavailable, try again.",
     };

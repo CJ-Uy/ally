@@ -16,11 +16,13 @@
     "active-win": "^9.0.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.0",
+    "pdf-parse": "^2.4.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@typescript-eslint/eslint-plugin": "^7.1.1",

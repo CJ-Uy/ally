@@ -19,6 +19,7 @@ import {
   stopSession,
 } from "./session";
 import { sendToAgent } from "./agent/gemini";
+import { getAiStatus } from "./agent/llm";
 import { createLockWindow, createOrbWindow } from "./windows";
 import { startPoller, stopPoller } from "./poller";
 import { registerProductivityIpc } from "./ipc/productivity";
@@ -358,6 +359,8 @@ ipcMain.handle("db:health", async () => {
   await db.$client.execute("select 1");
   return { ok: true };
 });
+
+ipcMain.handle("ai:status", async () => getAiStatus());
 
 ipcMain.handle(
   "r2:list",

@@ -1,9 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSubject, type SubjectFamiliarity } from "../data/subjects";
 import { db } from "../db";
 import { syllabi } from "../../src/lib/schema";
 import { eq, desc } from "drizzle-orm";
-import { modelFor } from "./models";
+import { generate } from "./llm";
 
 export const preTestAgent = {
   name: "Pre-Test Author",
@@ -37,15 +36,6 @@ Output shape:
   },
   triggers: ["on_pretest_request"],
 } as const;
-
-let client: GoogleGenerativeAI | null = null;
-function getClient(): GoogleGenerativeAI {
-  if (client) return client;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-  client = new GoogleGenerativeAI(apiKey);
-  return client;
-}
 
 export type PreTestBand = SubjectFamiliarity;
 
@@ -114,7 +104,6 @@ function normalize(raw: unknown, subjectName: string): PreTestQuestion[] {
     valid.push({ prompt, choices, correctIndex, band });
   }
   if (valid.length === 0) {
-    // Hard fallback so the UI never gets stuck without questions.
     return [
       {
         prompt: `Have you studied ${subjectName} before?`,
@@ -140,12 +129,6 @@ export async function generatePreTest(subjectId: number): Promise<PreTestPayload
     `[preTest] generating for subject "${subject.name}" (id=${subjectId}, topics=${topics.length})`,
   );
 
-  const model = getClient().getGenerativeModel({
-    model: modelFor("pretest"),
-    systemInstruction: preTestAgent.instructions,
-    generationConfig: { responseMimeType: "application/json" },
-  });
-
   const topicLine =
     topics.length > 0
       ? `Topics from the syllabus: ${topics.slice(0, 30).join(", ")}.`
@@ -156,9 +139,13 @@ ${topicLine}
 
 Write 3-5 casual familiarity-check questions per the rules. Return only the JSON object.`;
 
-  const result = await model.generateContent(userPrompt);
-  const raw = result.response.text();
-  console.log(`[preTest] raw (${raw.length} chars):`, raw.slice(0, 400));
+  const { text: raw, provider } = await generate({
+    slot: "pretest",
+    system: preTestAgent.instructions,
+    prompt: userPrompt,
+    json: true,
+  });
+  console.log(`[preTest] raw via ${provider} (${raw.length} chars):`, raw.slice(0, 400));
 
   let parsed: unknown;
   try {
@@ -178,7 +165,6 @@ export function scorePreTest(
 ): SubjectFamiliarity {
   if (questions.length === 0) return "beginner";
 
-  // Weight correct answers by their band. Confident-band hits count most.
   const weights: Record<PreTestBand, number> = {
     beginner: 1,
     familiar: 2,

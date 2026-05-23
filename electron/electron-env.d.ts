@@ -157,11 +157,26 @@ interface AtRiskItemDto {
 
 type Unsubscribe = () => void;
 
+interface AiProviderStatusDto {
+  provider: "ollama" | "gemini";
+  alive: boolean;
+  latencyMs: number | null;
+  model?: string;
+  endpoint?: string;
+  error?: string;
+}
+
+interface AiStatusDto {
+  ollama: AiProviderStatusDto;
+  gemini: AiProviderStatusDto;
+}
+
 // Used in Renderer process, expose in `preload.ts`
 interface Window {
   api: {
     ping: () => Promise<string>;
     dbHealth: () => Promise<{ ok: boolean }>;
+    aiStatus: () => Promise<AiStatusDto>;
     r2List: (prefix?: string) => Promise<{
       objects: Array<{
         key: string;

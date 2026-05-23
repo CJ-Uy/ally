@@ -13,6 +13,7 @@ const invoke = <T = unknown>(channel: string, payload?: unknown) =>
 const api: Window["api"] = {
   ping: () => invoke<string>("app:ping"),
   dbHealth: () => invoke<{ ok: boolean }>("db:health"),
+  aiStatus: () => invoke<AiStatusDto>("ai:status"),
   r2List: (prefix?: string) =>
     invoke("r2:list", prefix) as Promise<{
       objects: Array<{

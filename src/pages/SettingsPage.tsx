@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { refreshAll, useActivityToday, useProfile, useSubjects } from "../data/store";
 
-type SettingsTab = "profile" | "notifications" | "subjects" | "data";
+type SettingsTab = "profile" | "notifications" | "subjects" | "ai" | "data";
 
 const NOTIFICATION_ITEMS: { key: NotificationToggleKey; label: string; description: string }[] = [
   {
@@ -230,6 +230,190 @@ function SubjectsTab() {
   );
 }
 
+function AiAgentsTab() {
+  const [status, setStatus] = useState<AiStatusDto | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    if (!window.api?.aiStatus) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await window.api.aiStatus();
+      setStatus(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const renderProvider = (
+    label: string,
+    primary: boolean,
+    p: AiProviderStatusDto | undefined,
+  ) => {
+    if (!p) return null;
+    const dotColor = p.alive ? "#16a34a" : "#dc2626";
+    return (
+      <div className="settings-card" key={p.provider}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: dotColor,
+                display: "inline-block",
+              }}
+            />
+            <div className="settings-card__label" style={{ margin: 0 }}>
+              {label}
+            </div>
+            {primary && (
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "2px 8px",
+                  borderRadius: 10,
+                  background: "var(--surface-soft, #eef)",
+                  color: "var(--ink-soft)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                Primary
+              </span>
+            )}
+            {!primary && (
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "2px 8px",
+                  borderRadius: 10,
+                  background: "var(--surface-soft, #eef)",
+                  color: "var(--ink-soft)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                Fallback
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: 12,
+              color: p.alive ? "#16a34a" : "#dc2626",
+              fontWeight: 600,
+            }}
+          >
+            {p.alive ? "ALIVE" : "DOWN"}
+          </div>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "max-content 1fr",
+            gap: "4px 12px",
+            fontSize: 13,
+            color: "var(--ink-soft)",
+          }}
+        >
+          {p.endpoint && (
+            <>
+              <div>Endpoint</div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono, monospace)",
+                  wordBreak: "break-all",
+                }}
+              >
+                {p.endpoint}
+              </div>
+            </>
+          )}
+          {p.model && (
+            <>
+              <div>Model</div>
+              <div style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                {p.model}
+              </div>
+            </>
+          )}
+          {p.latencyMs !== null && (
+            <>
+              <div>Latency</div>
+              <div>{p.latencyMs} ms</div>
+            </>
+          )}
+          {p.error && (
+            <>
+              <div>Error</div>
+              <div style={{ color: "#dc2626" }}>{p.error}</div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="settings-stack">
+      <div className="settings-card">
+        <div className="settings-card__label">AI provider routing</div>
+        <div className="settings-card__hint">
+          Ally tries Ollama first for every AI call. If Ollama is unreachable,
+          it falls back to the Gemini API. Syllabus PDF parsing extracts text
+          locally before sending it to Ollama; Gemini still receives the raw
+          PDF when it gets the fallback.
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button
+          type="button"
+          className="btn btn--sm"
+          onClick={() => void refresh()}
+          disabled={loading}
+        >
+          {loading ? "Checking…" : "Refresh status"}
+        </button>
+        {error && (
+          <span style={{ color: "#dc2626", fontSize: 13 }}>{error}</span>
+        )}
+      </div>
+
+      {status ? (
+        <>
+          {renderProvider("Ollama", true, status.ollama)}
+          {renderProvider("Gemini", false, status.gemini)}
+        </>
+      ) : (
+        !error && (
+          <div className="settings-card" style={{ color: "var(--ink-soft)" }}>
+            Checking providers…
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 function DataTab() {
   const [activity] = useActivityToday();
   const [resetting, setResetting] = useState(false);
@@ -295,6 +479,7 @@ export function SettingsPage() {
     { id: "profile", label: "Profile" },
     { id: "notifications", label: "Notifications" },
     { id: "subjects", label: "Subjects" },
+    { id: "ai", label: "AI Agents" },
     { id: "data", label: "Activity" },
   ];
 
@@ -323,6 +508,7 @@ export function SettingsPage() {
       {tab === "profile" && <ProfileTab />}
       {tab === "notifications" && <NotificationsTab />}
       {tab === "subjects" && <SubjectsTab />}
+      {tab === "ai" && <AiAgentsTab />}
       {tab === "data" && <DataTab />}
     </div>
   );

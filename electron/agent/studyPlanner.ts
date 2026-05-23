@@ -1,9 +1,5 @@
-import {
-  FunctionCallingMode,
-  GoogleGenerativeAI,
-  SchemaType,
-  type FunctionDeclaration,
-} from "@google/generative-ai";
+import { SchemaType, type FunctionDeclaration } from "@google/generative-ai";
+import { chatWithTools } from "./llm";
 import type { ChatMessage } from "../session";
 import { getProfile } from "../data/profile";
 import {
@@ -38,8 +34,6 @@ import {
   getCurrentSubject,
   isSessionActive,
 } from "../session";
-import { modelFor } from "./models";
-
 export const studyPlannerAgent = {
   name: "Study Planner",
   description:
@@ -183,15 +177,6 @@ CRITICAL FALLBACK: every turn MUST produce at least one visible sentence to the 
   },
   triggers: ["on_planner_chat_message"],
 } as const;
-
-let client: GoogleGenerativeAI | null = null;
-function getClient(): GoogleGenerativeAI {
-  if (client) return client;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-  client = new GoogleGenerativeAI(apiKey);
-  return client;
-}
 
 const tools: FunctionDeclaration[] = [
   {
@@ -1028,98 +1013,39 @@ export async function sendToPlanner(
   console.log(`[planner] → user: ${userMessage.slice(0, 100)}`);
   console.log(`[planner] history length: ${history.length}`);
 
-  const model = getClient().getGenerativeModel({
-    model: modelFor("planner"),
-    systemInstruction,
-    tools: [{ functionDeclarations: tools }],
-    toolConfig: { functionCallingConfig: { mode: FunctionCallingMode.AUTO } },
-  });
-
-  const chat = model.startChat({
-    history: history.map((m) => ({
-      role: m.role,
-      parts: [{ text: m.text }],
-    })),
-  });
-
-  const SEND_OPTS = { timeout: 30_000 };
-
-  console.log(`[planner] sending first message…`);
-  let response = await chat.sendMessage(userMessage, SEND_OPTS);
-  console.log(`[planner] first response received`);
-
-  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const calls = response.response.functionCalls();
-    if (!calls || calls.length === 0) {
-      console.log(`[planner] no more tool calls after iteration ${i}`);
-      break;
-    }
-    console.log(
-      `[planner] iter ${i}: ${calls.length} tool call(s) → ${calls.map((c) => c.name).join(", ")}`,
-    );
-
-    const responses = [] as Array<{
-      functionResponse: { name: string; response: Record<string, unknown> };
-    }>;
-    for (const call of calls) {
-      try {
-        const result = await runTool(call.name, (call.args ?? {}) as ToolArgs);
+  try {
+    const { text, provider } = await chatWithTools({
+      slot: "planner",
+      system: systemInstruction,
+      history,
+      message: userMessage,
+      tools,
+      runTool: async (name, args) => {
+        const result = await runTool(name, args as ToolArgs);
         console.log(
-          `[planner] tool ${call.name} →`,
+          `[planner] tool ${name} →`,
           JSON.stringify(result).slice(0, 200),
         );
-        responses.push({
-          functionResponse: {
-            name: call.name,
-            response: { result },
-          },
-        });
-      } catch (toolErr) {
-        console.error(`[planner] tool ${call.name} threw:`, toolErr);
-        responses.push({
-          functionResponse: {
-            name: call.name,
-            response: {
-              result: {
-                error:
-                  toolErr instanceof Error ? toolErr.message : String(toolErr),
-              },
-            },
-          },
-        });
-      }
-    }
-    console.log(`[planner] sending tool responses…`);
-    response = await chat.sendMessage(responses, SEND_OPTS);
-    console.log(`[planner] tool response received`);
-  }
+        return result;
+      },
+      maxIterations: MAX_TOOL_ITERATIONS,
+    });
+    console.log(`[planner] ← (${provider}) ${text.slice(0, 200)}`);
 
-  const text = response.response.text();
-  console.log(`[planner] ← model: ${text.slice(0, 200)}`);
-
-  if (!text.trim()) {
-    const candidate = response.response.candidates?.[0];
-    const finishReason = candidate?.finishReason ?? "UNKNOWN";
-    const safetyRatings = candidate?.safetyRatings ?? [];
-    const parts = candidate?.content?.parts ?? [];
-    console.warn(
-      `[planner] empty text response. finishReason=${finishReason} parts=${JSON.stringify(parts).slice(0, 300)} safety=${JSON.stringify(safetyRatings).slice(0, 200)}`,
-    );
-
-    if (finishReason === "SAFETY" || finishReason === "RECITATION") {
+    if (!text.trim()) {
       return {
-        visibleText: `Gemini blocked the response (${finishReason}). Try rephrasing.`,
+        visibleText:
+          "Planner returned an empty response. Check the Electron main-process console for details.",
       };
     }
-    if (finishReason === "MAX_TOKENS") {
-      return {
-        visibleText: `Gemini ran out of tokens before finishing. Try a shorter request.`,
-      };
-    }
+    return { visibleText: text.trim() };
+  } catch (err) {
+    console.error(`[planner] both providers failed:`, err);
     return {
-      visibleText: `Gemini returned an empty response (finishReason: ${finishReason}). Check the Electron main-process console for full details.`,
+      visibleText:
+        err instanceof Error
+          ? `Planner unavailable: ${err.message}`
+          : "Planner unavailable.",
     };
   }
-
-  return { visibleText: text.trim() };
 }

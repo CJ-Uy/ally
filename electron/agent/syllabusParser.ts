@@ -1,7 +1,4 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { modelFor } from "./models";
+import { generate } from "./llm";
 
 export const syllabusParserAgent = {
   name: "Syllabus Parser",
@@ -52,15 +49,6 @@ Return ONLY a JSON object in this exact shape, with no prose, no markdown fences
   triggers: ["on_subject_syllabus_upload"],
 } as const;
 
-let client: GoogleGenerativeAI | null = null;
-function getClient(): GoogleGenerativeAI {
-  if (client) return client;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
-  client = new GoogleGenerativeAI(apiKey);
-  return client;
-}
-
 export interface ParsedDeadline {
   title: string;
   dueDate: string;
@@ -98,40 +86,19 @@ function stripFences(text: string): string {
     .trim();
 }
 
-function readPdfBase64(filePath: string): string {
-  const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
-  const buffer = readFileSync(absolute);
-  return buffer.toString("base64");
-}
-
 export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus> {
   console.log(`[syllabus] parsing ${filePath}…`);
-  const base64 = readPdfBase64(filePath);
-  console.log(`[syllabus] PDF size: ${Math.round(base64.length / 1024)} KB (base64)`);
 
-  const model = getClient().getGenerativeModel({
-    model: modelFor("parser"),
-    systemInstruction: syllabusParserAgent.instructions,
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
+  const { text: raw, provider } = await generate({
+    slot: "parser",
+    system: syllabusParserAgent.instructions,
+    prompt:
+      "Extract structured planning data from this syllabus. Return only the JSON object described in the instructions.",
+    json: true,
+    pdfPath: filePath,
   });
 
-  console.log(`[syllabus] calling Gemini…`);
-  const result = await model.generateContent([
-    {
-      inlineData: {
-        data: base64,
-        mimeType: "application/pdf",
-      },
-    },
-    {
-      text: "Extract structured planning data from this syllabus. Return only the JSON object described in the instructions.",
-    },
-  ]);
-
-  const raw = result.response.text();
-  console.log(`[syllabus] Gemini response (${raw.length} chars):`);
+  console.log(`[syllabus] response via ${provider} (${raw.length} chars):`);
   console.log(raw.slice(0, 2000));
   if (raw.length > 2000) console.log("  …(truncated)");
 
@@ -142,7 +109,7 @@ export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus
   } catch (err) {
     console.error(`[syllabus] JSON.parse failed:`, err);
     throw new Error(
-      `Gemini returned invalid JSON. Raw response: ${raw.slice(0, 300)}`,
+      `LLM returned invalid JSON. Raw response: ${raw.slice(0, 300)}`,
     );
   }
 

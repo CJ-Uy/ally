@@ -34,6 +34,7 @@ export default defineConfig({
                 'drizzle-orm/libsql',
                 'active-win',
                 '@google/generative-ai',
+                'pdf-parse',
               ],
             },
           },
