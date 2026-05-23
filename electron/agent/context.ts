@@ -1,5 +1,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { getProfile } from "../data/profile";
+import { listOverdueTasks, listTodayTasks } from "../data/tasks";
+import { listUpcomingEvents } from "../data/events";
+import { listSubjects } from "../data/subjects";
+import { currentStreakDays, getTodayActivity } from "../data/activity";
+import {
+  elapsedMinutes,
+  getCurrentSubject,
+  isSessionActive,
+  sessionStartedAtIso,
+} from "../session";
 
 export interface MockContext {
   studySession: {
@@ -34,9 +45,71 @@ function mockContextPath(): string {
   return path.join(appRoot, "mock-context.json");
 }
 
+// Retained as a last-resort fallback if Turso is unreachable. Scope 4 wires
+// `buildLiveContext()` as the primary source.
 export function readMockContext(): MockContext {
   const raw = readFileSync(mockContextPath(), "utf-8");
   return JSON.parse(raw) as MockContext;
+}
+
+export async function buildLiveContext(): Promise<MockContext> {
+  const [
+    profile,
+    subjects,
+    todayTasks,
+    overdueTasks,
+    upcomingEvents,
+    activity,
+    streakDays,
+  ] = await Promise.all([
+    getProfile(),
+    listSubjects(),
+    listTodayTasks(),
+    listOverdueTasks(),
+    listUpcomingEvents(7),
+    getTodayActivity(),
+    currentStreakDays(),
+  ]);
+
+  const subjectMap = new Map(subjects.map((s) => [s.id, s.name]));
+
+  // De-dupe: listOverdueTasks ⊂ listTodayTasks already (both are open tasks
+  // due ≤ end-of-today). Use a Map keyed by id.
+  const taskBag = new Map<number, (typeof todayTasks)[number]>();
+  for (const t of todayTasks) taskBag.set(t.id, t);
+  for (const t of overdueTasks) taskBag.set(t.id, t);
+
+  const todayTaskShape = Array.from(taskBag.values()).map((t) => ({
+    id: String(t.id),
+    subject: subjectMap.get(t.subjectId) ?? "Unknown",
+    title: t.title,
+    done: t.status === "done",
+  }));
+
+  const calendarShape = upcomingEvents.map((e) => ({
+    title: e.title,
+    date: e.startsAt.toISOString(),
+    type: e.type,
+  }));
+
+  return {
+    studySession: {
+      active: isSessionActive(),
+      startedAt: sessionStartedAtIso() ?? new Date().toISOString(),
+      elapsedMinutes: elapsedMinutes(),
+      currentSubject: getCurrentSubject(),
+    },
+    todayTasks: todayTaskShape,
+    calendar: calendarShape,
+    streaks: {
+      currentDays: streakDays,
+      breaksUsedToday: activity.breaksUsed,
+    },
+    userProfile: {
+      studyHoursPerWeek: profile?.studyHoursPerWeek ?? 15,
+      educationLevel: profile?.educationLevel ?? "college",
+    },
+  };
 }
 
 function daysUntil(iso: string): number {

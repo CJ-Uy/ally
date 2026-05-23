@@ -1,9 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Onest:wght@400;500;600;700&family=Caveat:wght@500&family=DM+Mono:wght@400;500&display=swap');
+
 :root {
-  font-family: "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
+  /* Study Blue palette */
+  --bg: #eef2f7;
+  --panel: #f9fbfd;
+  --ink: #1e2a3d;
+  --ink-soft: #6b7a93;
+  --line: #dde5ee;
+  --sky: #caddec;
+  --sage: #b8d0c4;
+  --butter: #f0e0b5;
+  --blush: #f4c9c2;
+  --fox: #f5a66b;
+  --accent: #4a6fa5;
+
+  --font-display: "Bricolage Grotesque", "Newsreader", Georgia, serif;
+  --font-body: "Onest", system-ui, sans-serif;
+  --font-mono: "DM Mono", "JetBrains Mono", ui-monospace, monospace;
+  --font-hand: "Caveat", cursive;
+
+  --paper-svg: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.12 0 0 0 0 0.18 0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+
+  font-family: var(--font-body);
   line-height: 1.5;
   font-weight: 400;
-  color: #0f172a;
-  background: #f5f7fb;
+  color: var(--ink);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -23,33 +45,82 @@ body {
   min-height: 100vh;
 }
 
-button,
-input {
-  font-family: inherit;
-}
-
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.55em 1.1em;
-  font-size: 0.95em;
-  font-weight: 600;
-  background-color: #0f172a;
-  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  background: var(--panel);
+  color: var(--ink);
   cursor: pointer;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
-
 button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 4px 10px rgba(30, 42, 61, 0.12);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+button.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+button.ghost:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+button.accent {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+button.accent:hover {
+  box-shadow: 0 4px 14px rgba(74, 111, 165, 0.35);
+  background: #3d5e8a;
 }
 
-input {
+input,
+textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  border: 1px solid #d1d5db;
-  padding: 0.5em 0.75em;
-  min-width: 220px;
+  padding: 0.5rem 0.8rem;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+input:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.12);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+::selection {
+  background: var(--sky);
+  color: var(--ink);
 }
