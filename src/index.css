@@ -45,8 +45,82 @@ body {
   min-height: 100vh;
 }
 
-button,
+button {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(30, 42, 61, 0.12);
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+button.ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+button.ghost:hover {
+  background: var(--bg);
+  color: var(--ink);
+}
+button.accent {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+button.accent:hover {
+  box-shadow: 0 4px 14px rgba(74, 111, 165, 0.35);
+  background: #3d5e8a;
+}
+
 input,
 textarea {
   font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+input:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.12);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.display {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+::selection {
+  background: var(--sky);
+  color: var(--ink);
 }

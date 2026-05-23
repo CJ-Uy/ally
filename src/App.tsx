@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { CalendarPage } from "./pages/CalendarPage";
-import { SubjectsPage, type Subject } from "./pages/SubjectsPage";
+import { SubjectsPage } from "./pages/SubjectsPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
 import { SessionEndPage } from "./pages/SessionEndPage";
 import { SubjectDetailPage } from "./pages/SubjectDetailPage";
 import { AddSubjectPage } from "./pages/AddSubjectPage";
 import { AddSemesterPage } from "./pages/AddSemesterPage";
+import { Onboarding } from "./onboarding/Onboarding";
+import { useTodayTasks, useUpcomingEvents, refreshAll } from "./data/store";
+
+type AppState = "loading" | "onboarding" | "shell";
 
 type Page =
-  | "onboarding"
   | "dashboard"
   | "calendar"
   | "subjects"
@@ -29,13 +31,6 @@ function formatMmSs(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
-const TASKS = [
-  { subject: "Linear Algebra", title: "Practice problems Ch. 4", done: false },
-  { subject: "History",        title: "Read Module 3",            done: true  },
-  { subject: "Spanish",        title: "Vocab review",             done: false },
-  { subject: "Essay",          title: "First draft",              done: false },
-];
-
 const NAV_ITEMS: { id: Page | "history"; label: string }[] = [
   { id: "dashboard", label: "Today" },
   { id: "calendar",  label: "Calendar" },
@@ -53,7 +48,11 @@ function Squiggle({ color, width = 80 }: { color: string; width?: number }) {
   );
 }
 
-function DashboardPage({ snap, onToggle, onSessionEnd }: { snap: SessionStateSnapshot | null; onToggle: () => void; onSessionEnd: () => void }) {
+function DashboardPage({ snap, onToggle, onSessionEnd }: {
+  snap: SessionStateSnapshot | null;
+  onToggle: () => void;
+  onSessionEnd: () => void;
+}) {
   const sessionActive = snap?.session.active ?? false;
   const breakActive   = snap?.break.active   ?? false;
   const paused        = snap?.session.paused  ?? false;
@@ -88,12 +87,11 @@ function DashboardPage({ snap, onToggle, onSessionEnd }: { snap: SessionStateSna
       <div className="workspace__header">
         <div>
           <div className="workspace__meta">
-            {breakActive ? "Break · Linear Algebra" : "Session · Linear Algebra"}
+            {breakActive ? "Break" : "Session · studying"}
           </div>
           <div className="workspace__timer">{timerDisplay}</div>
           <div className="workspace__status">
             <span className={stickerClass}>{statusLabel}</span>
-            <span className="sticker sticker--panel">0 breaks today</span>
           </div>
         </div>
         <div className="workspace__actions">
@@ -102,42 +100,23 @@ function DashboardPage({ snap, onToggle, onSessionEnd }: { snap: SessionStateSna
       </div>
 
       <div className="card card--accent">
-        <div className="card__title">What you're working on</div>
+        <div className="card__title">Session in progress</div>
         <div className="card__body">
-          Practice problems Ch. 4 — eigenvalues. You got through 6 of 12 yesterday.
-        </div>
-      </div>
-
-      <div className="stats-grid">
-        <div className="card">
-          <div className="card__label">Streak</div>
-          <div className="card__value">4<span className="card__value-unit">days</span></div>
-          <div className="streak-dots">
-            {[1,1,1,1,0,0,0].map((on, i) => (
-              <div key={i} className={`streak-dot streak-dot--${on ? "on" : "off"}`} />
-            ))}
-          </div>
-        </div>
-        <div className="card">
-          <div className="card__label">This week</div>
-          <div className="card__value">14h 22m</div>
-          <div className="card__sub">+2h vs. goal</div>
-        </div>
-        <div className="card">
-          <div className="card__label">Blocked today</div>
-          <div className="card__value">3</div>
-          <div className="card__sub">TikTok · YouTube · Reddit</div>
+          Your focus session is active. The orb in the corner tracks your time.
         </div>
       </div>
     </>
   );
 }
 
-export default function App() {
+function AppShell() {
   const [snap, setSnap]   = useState<SessionStateSnapshot | null>(null);
-  const [page, setPage]   = useState<Page>("onboarding");
-  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [page, setPage]   = useState<Page>("dashboard");
+  const [selectedSubject, setSelectedSubject] = useState<SubjectDto | null>(null);
   const [navPage, setNavPage] = useState<Page>("dashboard");
+
+  const [todayTasks] = useTodayTasks();
+  const [upcomingEvents] = useUpcomingEvents();
 
   useEffect(() => {
     if (!window.api?.sessionGetState) return;
@@ -158,7 +137,7 @@ export default function App() {
     setPage(target);
   };
 
-  const goToSubjectDetail = (s: Subject) => {
+  const goToSubjectDetail = (s: SubjectDto) => {
     setSelectedSubject(s);
     setPage("subject-detail");
   };
@@ -167,30 +146,28 @@ export default function App() {
     ? page
     : navPage;
 
-  const isFullscreen = page === "onboarding" || page === "session-end" || page === "add-semester";
+  const isFullscreen = page === "session-end" || page === "add-semester";
 
   if (isFullscreen) {
     return (
       <div className="app-shell app-shell--fullscreen">
-        {page === "onboarding" && (
-          <OnboardingPage onDone={() => { setPage("dashboard"); setNavPage("dashboard"); }} />
-        )}
         {page === "session-end" && (
-          <SessionEndPage onRestart={() => { setPage("dashboard"); setNavPage("dashboard"); }} />
+          <SessionEndPage onRestart={() => { setPage("dashboard"); setNavPage("dashboard"); void toggle(); }} />
         )}
         {page === "add-semester" && (
           <AddSemesterPage
             onBack={() => setPage("subjects")}
-            onDone={() => { setPage("subjects"); setNavPage("subjects"); }}
+            onDone={() => { setPage("subjects"); setNavPage("subjects"); refreshAll(); }}
           />
         )}
       </div>
     );
   }
 
+  const nextEvent = upcomingEvents[0] ?? null;
+
   return (
     <div className="app-shell">
-      {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="brand">
           <img src="/ally.png" alt="Ally" className="brand__ally" />
@@ -210,16 +187,15 @@ export default function App() {
           ))}
         </nav>
 
-        {activeNavPage === "dashboard" && (
+        {activeNavPage === "dashboard" && todayTasks.length > 0 && (
           <>
             <div className="sidebar__label">Today</div>
             <ul className="task-list">
-              {TASKS.map((task, i) => (
-                <li key={i} className={`task-item${task.done ? " task-item--done" : ""}`}>
-                  <div className={`task-item__check${task.done ? " task-item__check--done" : ""}`} />
+              {todayTasks.slice(0, 5).map((task) => (
+                <li key={task.id} className={`task-item${task.status === "done" ? " task-item--done" : ""}`}>
+                  <div className={`task-item__check${task.status === "done" ? " task-item__check--done" : ""}`} />
                   <div>
                     <div className="task-item__title">{task.title}</div>
-                    <div className="task-item__subject">{task.subject}</div>
                   </div>
                 </li>
               ))}
@@ -227,14 +203,17 @@ export default function App() {
           </>
         )}
 
-        <div className="sidebar__upcoming">
-          <div className="sidebar__upcoming-label">Upcoming</div>
-          <div className="sidebar__upcoming-event">Linear Algebra exam</div>
-          <div style={{ color: "var(--fox)", fontSize: 12, marginTop: 2 }}>in 6 days</div>
-        </div>
+        {nextEvent && (
+          <div className="sidebar__upcoming">
+            <div className="sidebar__upcoming-label">Upcoming</div>
+            <div className="sidebar__upcoming-event">{nextEvent.title}</div>
+            <div style={{ color: "var(--fox)", fontSize: 12, marginTop: 2 }}>
+              {new Date(nextEvent.startsAt).toLocaleDateString()}
+            </div>
+          </div>
+        )}
       </aside>
 
-      {/* ── Main ── */}
       <main className="workspace">
         {page === "dashboard" && (
           <DashboardPage
@@ -255,7 +234,11 @@ export default function App() {
           <SubjectDetailPage
             subject={selectedSubject}
             onBack={() => setPage("subjects")}
-            onStartSession={() => { setPage("dashboard"); setNavPage("dashboard"); toggle(); }}
+            onStartSession={() => {
+              setPage("dashboard");
+              setNavPage("dashboard");
+              if (!snap?.session.active) toggle();
+            }}
           />
         )}
         {page === "add-subject" && (
@@ -268,4 +251,42 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+export default function App() {
+  const [state, setState] = useState<AppState>("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      try {
+        if (window.api?.schemaBootstrap) {
+          await window.api.schemaBootstrap();
+        }
+        const profile = window.api?.profileGet ? await window.api.profileGet() : null;
+        if (cancelled) return;
+        setState(profile ? "shell" : "onboarding");
+      } catch (err) {
+        console.error("[app] bootstrap failed:", err);
+        if (!cancelled) setState("onboarding");
+      }
+    };
+    void init();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (state === "loading") {
+    return (
+      <div className="app-loading">
+        <span className="app-loading__mark">A</span>
+        <p>preparing your study room…</p>
+      </div>
+    );
+  }
+
+  if (state === "onboarding") {
+    return <Onboarding onDone={() => setState("shell")} />;
+  }
+
+  return <AppShell />;
 }

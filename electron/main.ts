@@ -13,6 +13,7 @@ import {
   isSessionActive,
   resumeFromNegotiation,
   setGrace,
+  setSessionSubject,
   snapshot,
   startSession,
   stopSession,
@@ -20,6 +21,13 @@ import {
 import { sendToAgent } from "./agent/gemini";
 import { createLockWindow, createOrbWindow } from "./windows";
 import { startPoller, stopPoller } from "./poller";
+import { registerProductivityIpc } from "./ipc/productivity";
+import { bootstrapSchema } from "./data/bootstrap";
+import { recordBreakUsed, recordCompletedSession } from "./data/activity";
+import {
+  runAppOpenChecks,
+  scheduleDailyChecks,
+} from "./notifications";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -199,6 +207,17 @@ function bootstrap() {
     orbWin = null;
   });
 
+  void bootstrapSchema()
+    .then(() => {
+      void runAppOpenChecks().catch((err) => {
+        console.warn("[notifications] app-open checks failed:", err);
+      });
+      scheduleDailyChecks();
+    })
+    .catch((err) => {
+      console.error("[bootstrap] schema init failed:", err);
+    });
+
   startPoller({
     onLockTrigger: (info) => {
       openLockWindow(info);
@@ -213,7 +232,10 @@ function bootstrap() {
   });
 }
 
-app.whenReady().then(bootstrap);
+app.whenReady().then(() => {
+  registerProductivityIpc();
+  bootstrap();
+});
 
 app.on("before-quit", () => {
   stopPoller();
@@ -221,9 +243,13 @@ app.on("before-quit", () => {
 
 ipcMain.handle("app:ping", async () => "pong");
 
-ipcMain.handle("session:start", async () => {
+ipcMain.handle("session:start", async (_event, payload?: unknown) => {
   if (!isSessionActive()) {
-    startSession();
+    const subject =
+      typeof payload === "object" && payload !== null && "subject" in payload
+        ? String((payload as { subject: unknown }).subject ?? "")
+        : "";
+    startSession(subject);
     broadcastState();
   }
 });
@@ -232,8 +258,23 @@ ipcMain.handle("session:stop", async () => {
   if (isSessionActive()) {
     stopSession();
     closeLockWindow();
+    try {
+      await recordCompletedSession();
+    } catch (err) {
+      console.warn("[session] failed to record completed session:", err);
+    }
     broadcastState();
   }
+});
+
+ipcMain.handle("session:setSubject", async (_event, payload: unknown) => {
+  const subject =
+    typeof payload === "object" && payload !== null && "subject" in payload
+      ? String((payload as { subject: unknown }).subject ?? "")
+      : "";
+  setSessionSubject(subject);
+  broadcastState();
+  return { ok: true };
 });
 
 ipcMain.handle("session:getState", async () => snapshot());
@@ -268,6 +309,11 @@ ipcMain.handle(
       const keyword = currentLockKeyword() ?? "unknown";
       grantBreak(keyword, reply.decision.minutes);
       closeLockWindow();
+      try {
+        await recordBreakUsed();
+      } catch (err) {
+        console.warn("[session] failed to record break used:", err);
+      }
       broadcastState();
       return {
         visibleText: reply.visibleText,
