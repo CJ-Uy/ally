@@ -55,6 +55,15 @@ const api: Window["api"] = {
     return () => ipcRenderer.removeListener("lock:open", listener);
   },
 
+  orbAskAi: () => invoke<void>("orb:askAi"),
+  orbSetVisible: (visible: boolean) =>
+    invoke<void>("orb:setVisible", { visible }),
+  onOpenChat: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on("chat:open", listener);
+    return () => ipcRenderer.removeListener("chat:open", listener);
+  },
+
   schemaBootstrap: () => invoke<{ ok: boolean }>("schema:bootstrap"),
 
   profileGet: () => invoke<UserProfileDto | null>("profile:get"),

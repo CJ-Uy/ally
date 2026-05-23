@@ -2673,8 +2673,26 @@
 }
 .planner-msg__bubble--typing {
   display: inline-flex;
-  gap: 4px;
+  align-items: center;
+  gap: 5px;
   padding: 12px 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+}
+.planner-msg__bubble--typing .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+  animation: planner-dot-bounce 1.2s infinite ease-in-out;
+}
+.planner-msg__bubble--typing .dot:nth-child(2) { animation-delay: 0.15s; }
+.planner-msg__bubble--typing .dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes planner-dot-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40%           { transform: translateY(-4px); opacity: 1; }
 }
 
 .planner-chat__composer {
@@ -2689,6 +2707,30 @@
   flex: 1;
   font-size: 13px;
   background: var(--panel);
+}
+
+/* ── Ask Ally floating overlay popup ── */
+.ask-ally-overlay {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+  pointer-events: none;
+}
+.ask-ally-popup {
+  pointer-events: auto;
+  width: 380px;
+  height: min(560px, calc(100vh - 80px));
+  box-shadow:
+    0 18px 48px rgba(30, 42, 61, 0.18),
+    0 4px 12px rgba(30, 42, 61, 0.08);
+  border: 1px solid var(--line);
+  animation: ask-ally-pop-in 180ms ease-out;
+  transform-origin: bottom right;
+}
+@keyframes ask-ally-pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ────────────────────────────────────────────────────────────

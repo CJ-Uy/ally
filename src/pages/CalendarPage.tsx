@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { refreshAll, useEvents, useSubjects, useTasks } from "../data/store";
+import { useMemo, useState } from "react";
+import { useEvents, useSubjects, useTasks } from "../data/store";
 
 type Mode = "month" | "week";
 
@@ -37,138 +37,6 @@ interface CellItem {
   kind: "task" | "exam" | "class" | "deadline" | "study_block";
 }
 
-interface PlannerTurn {
-  role: "user" | "model";
-  text: string;
-}
-
-function PlannerChatPanel({ onClose }: { onClose: () => void }) {
-  const [history, setHistory] = useState<PlannerTurn[]>([]);
-  const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
-  const scrollerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!window.api?.plannerHistory) return;
-    void window.api.plannerHistory().then(setHistory);
-  }, []);
-
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [history, sending]);
-
-  const send = async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || sending || !window.api?.plannerChat) return;
-    setInput("");
-    setHistory((h) => [...h, { role: "user", text: trimmed }]);
-    setSending(true);
-    try {
-      const reply = await window.api.plannerChat(trimmed);
-      setHistory((h) => [...h, { role: "model", text: reply.visibleText }]);
-      refreshAll();
-    } catch (err) {
-      setHistory((h) => [
-        ...h,
-        {
-          role: "model",
-          text: err instanceof Error ? `Something broke: ${err.message}` : "Something broke.",
-        },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const reset = async () => {
-    if (!window.api?.plannerReset) return;
-    await window.api.plannerReset();
-    setHistory([]);
-  };
-
-  const STARTERS = [
-    "What should I work on next?",
-    "Show me everything due this week.",
-    "Add a study session for tomorrow afternoon.",
-  ];
-
-  return (
-    <div className="planner-chat">
-      <div className="planner-chat__header">
-        <img src="/ally.png" alt="Ally" className="planner-chat__avatar" />
-        <div className="planner-chat__title">
-          <div className="planner-chat__title-main">Ask Ally</div>
-          <div className="planner-chat__title-sub">Study planner</div>
-        </div>
-        <div className="planner-chat__actions">
-          {history.length > 0 && (
-            <button type="button" className="btn btn--sm" onClick={() => void reset()}>
-              New
-            </button>
-          )}
-          <button type="button" className="btn btn--sm planner-chat__close" onClick={onClose}>
-            ×
-          </button>
-        </div>
-      </div>
-
-      <div className="planner-chat__scroll" ref={scrollerRef}>
-        {history.length === 0 && !sending && (
-          <div className="planner-chat__empty">
-            <p className="planner-chat__empty-title">Ask for what you'd ask a TA.</p>
-            <p className="planner-chat__empty-sub">
-              Ally has the tools to read and rewrite your plan.
-            </p>
-            <div className="planner-chat__starters">
-              {STARTERS.map((s) => (
-                <button
-                  type="button"
-                  key={s}
-                  className="planner-chat__starter"
-                  onClick={() => void send(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {history.map((t, i) => (
-          <div key={i} className={`planner-msg planner-msg--${t.role}`}>
-            <div className="planner-msg__bubble">{t.text}</div>
-          </div>
-        ))}
-        {sending && (
-          <div className="planner-msg planner-msg--model">
-            <div className="planner-msg__bubble planner-msg__bubble--typing">
-              <span className="dot" /><span className="dot" /><span className="dot" />
-            </div>
-          </div>
-        )}
-      </div>
-
-      <form
-        className="planner-chat__composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send(input);
-        }}
-      >
-        <input
-          placeholder="What can I help you plan?"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={sending}
-        />
-        <button type="submit" className="btn btn--primary btn--sm" disabled={sending || !input.trim()}>
-          Send
-        </button>
-      </form>
-    </div>
-  );
-}
-
 export function CalendarPage() {
   const [events] = useEvents();
   const [tasks] = useTasks();
@@ -179,7 +47,6 @@ export function CalendarPage() {
     return d;
   });
   const [mode, setMode] = useState<Mode>("month");
-  const [chatOpen, setChatOpen] = useState(false);
 
   const subjectMap = useMemo(
     () => new Map(subjects.map((s) => [s.id, s] as const)),
@@ -293,7 +160,7 @@ export function CalendarPage() {
   };
 
   return (
-    <div className={`page-calendar${chatOpen ? " page-calendar--with-chat" : ""}`}>
+    <div className="page-calendar">
       <div className="cal-main">
         <div className="page-header">
           <div>
@@ -320,14 +187,6 @@ export function CalendarPage() {
             <button type="button" className="btn cal-nav-btn" onClick={() => move(-1)} title="Previous">‹</button>
             <button type="button" className="btn" onClick={jumpToday}>Today</button>
             <button type="button" className="btn cal-nav-btn" onClick={() => move(1)} title="Next">›</button>
-            <button
-              type="button"
-              className={`btn${chatOpen ? " btn--primary" : ""}`}
-              onClick={() => setChatOpen((o) => !o)}
-              title="Ask Ally"
-            >
-              ✦ Ask Ally
-            </button>
           </div>
         </div>
 
@@ -365,7 +224,6 @@ export function CalendarPage() {
         )}
       </div>
 
-      {chatOpen && <PlannerChatPanel onClose={() => setChatOpen(false)} />}
     </div>
   );
 }

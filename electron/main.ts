@@ -244,6 +244,26 @@ app.on("before-quit", () => {
 
 ipcMain.handle("app:ping", async () => "pong");
 
+ipcMain.handle("orb:askAi", async () => {
+  if (win && !win.isDestroyed()) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+    win.webContents.send("chat:open");
+  }
+});
+
+ipcMain.handle("orb:setVisible", async (_event, payload: unknown) => {
+  if (!orbWin || orbWin.isDestroyed()) return;
+  const visible = typeof payload === "object" && payload !== null && "visible" in payload
+    ? Boolean((payload as { visible: unknown }).visible)
+    : true;
+  if (visible) {
+    if (!orbWin.isVisible()) orbWin.showInactive();
+  } else {
+    if (orbWin.isVisible()) orbWin.hide();
+  }
+});
+
 ipcMain.handle("session:start", async (_event, payload?: unknown) => {
   if (!isSessionActive()) {
     const subject =

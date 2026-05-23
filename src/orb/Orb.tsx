@@ -21,6 +21,7 @@ function FocusDots() {
 
 export function Orb() {
   const [snap, setSnap] = useState<SessionStateSnapshot | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!window.api?.sessionGetState) return;
@@ -34,32 +35,67 @@ export function Orb() {
       ? "break"
       : "studying";
 
-  const onClick = () => {
+  const onStudyClick = () => {
     if (!window.api?.sessionStart) return;
     if (mode === "idle") void window.api.sessionStart();
     else                 void window.api.sessionStop();
   };
 
-  const label =
-    mode === "idle"     ? "Click to start studying" :
-    mode === "break"    ? "On break" :
-                          "Studying — click to stop";
+  const onAskClick = () => {
+    void window.api?.orbAskAi?.();
+  };
+
+  const studyLabel =
+    mode === "idle"     ? "Start study" :
+    mode === "break"    ? "End break"   :
+                          "Stop study";
+
+  const studyIcon =
+    mode === "idle"     ? "▶" :
+    mode === "break"    ? "☕" :
+                          "■";
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`orb orb--${mode}`}
-      title={label}
-      aria-label={label}
+    <div
+      className={`orb-shell${expanded ? " orb-shell--expanded" : ""}`}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
     >
-      <img src="/ally.png" alt="Ally" className="orb__img" />
-      {mode === "studying" && <FocusDots />}
-      {mode === "break" && snap && (
-        <div className="orb__countdown-badge">
-          ☕ {formatMmSs(snap.break.msRemaining)}
-        </div>
-      )}
-    </button>
+      <div className="orb-actions" aria-hidden={!expanded}>
+        <button
+          type="button"
+          className="orb-action orb-action--ask"
+          onClick={onAskClick}
+          title="Ask Ally (Ctrl+K)"
+          aria-label="Ask Ally"
+          tabIndex={expanded ? 0 : -1}
+        >
+          <span className="orb-action__icon" aria-hidden>✦</span>
+          <span className="orb-action__label">Ask Ally</span>
+        </button>
+
+        <button
+          type="button"
+          className={`orb-action orb-action--study orb-action--study-${mode}`}
+          onClick={onStudyClick}
+          title={studyLabel}
+          aria-label={studyLabel}
+          tabIndex={expanded ? 0 : -1}
+        >
+          <span className="orb-action__icon" aria-hidden>{studyIcon}</span>
+          <span className="orb-action__label">{studyLabel}</span>
+        </button>
+      </div>
+
+      <div className={`orb orb--${mode}`} aria-hidden="true">
+        <img src="/ally.png" alt="" className="orb__img" />
+        {mode === "studying" && <FocusDots />}
+        {mode === "break" && snap && (
+          <div className="orb__countdown-badge">
+            ☕ {formatMmSs(snap.break.msRemaining)}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -180,6 +180,10 @@ interface Window {
     onStateUpdate: (cb: (snap: SessionStateSnapshot) => void) => Unsubscribe;
     onLockOpen: (cb: (info: LockOpenInfo) => void) => Unsubscribe;
 
+    orbAskAi: () => Promise<void>;
+    orbSetVisible: (visible: boolean) => Promise<void>;
+    onOpenChat: (cb: () => void) => Unsubscribe;
+
     schemaBootstrap: () => Promise<{ ok: boolean }>;
 
     profileGet: () => Promise<UserProfileDto | null>;

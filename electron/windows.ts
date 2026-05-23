@@ -58,7 +58,8 @@ function applyNavigationGuards(win: Electron.BrowserWindow) {
   });
 }
 
-const ORB_SIZE = 96;
+const ORB_WIDTH = 220;
+const ORB_HEIGHT = 240;
 const ORB_MARGIN = 16;
 
 export function createOrbWindow(): Electron.BrowserWindow {
@@ -67,10 +68,10 @@ export function createOrbWindow(): Electron.BrowserWindow {
 
   const win = new BrowserWindow({
     title: "Ally Orb",
-    width: ORB_SIZE,
-    height: ORB_SIZE,
-    x: workArea.x + workArea.width - ORB_SIZE - ORB_MARGIN,
-    y: workArea.y + workArea.height - ORB_SIZE - ORB_MARGIN,
+    width: ORB_WIDTH,
+    height: ORB_HEIGHT,
+    x: workArea.x + workArea.width - ORB_WIDTH - ORB_MARGIN,
+    y: workArea.y + workArea.height - ORB_HEIGHT - ORB_MARGIN,
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",

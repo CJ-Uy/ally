@@ -11,6 +11,7 @@ import { SubjectDetailPage } from "./pages/SubjectDetailPage";
 import { AddSubjectPage } from "./pages/AddSubjectPage";
 import { AddSemesterPage } from "./pages/AddSemesterPage";
 import { Onboarding } from "./onboarding/Onboarding";
+import { AskAlly } from "./chat/AskAlly";
 import { refreshAll, useTodayTasks, useUpcomingEvents } from "./data/store";
 
 type AppState = "loading" | "onboarding" | "shell";
@@ -42,9 +43,31 @@ function AppShell() {
   const [page, setPage] = useState<Page>("home");
   const [navPage, setNavPage] = useState<Page>("home");
   const [selectedSubject, setSelectedSubject] = useState<SubjectDto | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const [todayTasks] = useTodayTasks();
   const [upcomingEvents] = useUpcomingEvents();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setChatOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!window.api?.onOpenChat) return;
+    return window.api.onOpenChat(() => setChatOpen(true));
+  }, []);
+
+  useEffect(() => {
+    void window.api?.orbSetVisible?.(!chatOpen);
+  }, [chatOpen]);
 
   const goTo = (id: Page) => {
     setNavPage(id);
@@ -177,6 +200,8 @@ function AppShell() {
         )}
         {page === "settings" && <SettingsPage />}
       </main>
+
+      <AskAlly open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }
