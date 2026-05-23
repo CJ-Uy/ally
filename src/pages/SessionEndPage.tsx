@@ -1,15 +1,16 @@
 import { useActivityToday } from "../data/store";
 
-export function SessionEndPage({ onRestart }: { onRestart: () => void }) {
+type SessionEndPageProps = {
+  onDone: () => void;
+  onAnother: () => void;
+};
+
+export function SessionEndPage({ onDone, onAnother }: SessionEndPageProps) {
   const [activity] = useActivityToday();
 
   const sessionsCompleted = activity?.sessionsCompleted ?? 0;
   const breaksUsed = activity?.breaksUsed ?? 0;
   const streakDays = activity?.streakDays ?? 0;
-
-  const focusedLabel = sessionsCompleted > 0
-    ? `${sessionsCompleted}`
-    : "—";
 
   return (
     <div className="session-end">
@@ -20,7 +21,7 @@ export function SessionEndPage({ onRestart }: { onRestart: () => void }) {
 
         <div className="session-end__stats">
           <div className="session-end__stat">
-            <div className="session-end__stat-value">{focusedLabel}</div>
+            <div className="session-end__stat-value">{sessionsCompleted || "—"}</div>
             <div className="session-end__stat-label">Sessions</div>
           </div>
           <div className="session-end__stat">
@@ -45,8 +46,8 @@ export function SessionEndPage({ onRestart }: { onRestart: () => void }) {
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button className="btn" type="button" onClick={onRestart}>Done for now</button>
-          <button className="btn btn--primary" type="button" onClick={onRestart}>
+          <button className="btn" type="button" onClick={onDone}>Done for now</button>
+          <button className="btn btn--primary" type="button" onClick={onAnother}>
             Another session →
           </button>
         </div>
@@ -54,4 +55,3 @@ export function SessionEndPage({ onRestart }: { onRestart: () => void }) {
     </div>
   );
 }
-

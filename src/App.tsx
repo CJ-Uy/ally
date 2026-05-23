@@ -64,7 +64,14 @@ function AppShell() {
       <div className="app-shell app-shell--fullscreen">
         {page === "session-end" && (
           <SessionEndPage
-            onRestart={() => {
+            onDone={async () => {
+              if (window.api?.sessionStop) await window.api.sessionStop();
+              setPage("home");
+              setNavPage("home");
+            }}
+            onAnother={async () => {
+              if (window.api?.sessionStop) await window.api.sessionStop();
+              if (window.api?.sessionStart) await window.api.sessionStart();
               setPage("home");
               setNavPage("home");
             }}
@@ -201,8 +208,24 @@ export default function App() {
   if (state === "loading") {
     return (
       <div className="app-loading">
-        <img src="/ally.png" alt="Ally" style={{ width: 64, height: 64, objectFit: "contain" }} />
-        <p>preparing your study room…</p>
+        <div className="app-loading__stage">
+          <img src="/ally.png" alt="Ally" className="app-loading__ally" />
+          <svg className="app-loading__squiggle" width="120" height="10" viewBox="0 0 120 10">
+            <path
+              d="M2 6 Q 12 1, 22 5 T 42 5 T 62 5 T 82 5 T 102 5 T 118 5"
+              stroke="var(--fox)"
+              strokeWidth="2"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+          <p className="app-loading__label">
+            preparing your study room
+            <span className="app-loading__dot">.</span>
+            <span className="app-loading__dot">.</span>
+            <span className="app-loading__dot">.</span>
+          </p>
+        </div>
       </div>
     );
   }
