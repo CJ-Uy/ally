@@ -14,7 +14,14 @@ if (!url || !authToken) {
 const client = createClient({ url, authToken });
 
 // Order matters: drop child tables first so FK references don't complain.
-const TABLES = ["tasks", "events", "syllabi", "subjects", "user_profile"];
+const TABLES = [
+  "tasks",
+  "events",
+  "syllabi",
+  "subjects",
+  "user_profile",
+  "daily_activity",
+];
 
 console.log("Resetting Ally database…");
 

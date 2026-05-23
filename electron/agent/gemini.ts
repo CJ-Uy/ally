@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { agentConfig } from "./config";
-import { formatContext, readMockContext } from "./context";
+import { buildLiveContext, formatContext, readMockContext } from "./context";
 import type { ChatMessage } from "../session";
 import { clampMinutes } from "../session";
 
@@ -59,12 +59,22 @@ function parseDecision(text: string): { stripped: string; decision?: AgentDecisi
   }
 }
 
+async function loadContextBlock(): Promise<string> {
+  try {
+    const live = await buildLiveContext();
+    return formatContext(live);
+  } catch (err) {
+    console.warn("[gemini] live context failed, falling back to mock:", err);
+    return formatContext(readMockContext());
+  }
+}
+
 export async function sendToAgent(
   history: ChatMessage[],
   userMessage: string,
 ): Promise<AgentReply> {
   try {
-    const contextBlock = formatContext(readMockContext());
+    const contextBlock = await loadContextBlock();
     const systemInstruction = `${agentConfig.instructions}\n\n${contextBlock}`;
 
     const model = getClient().getGenerativeModel({

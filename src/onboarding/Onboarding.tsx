@@ -1,8 +1,18 @@
 import { useMemo, useState } from "react";
 import { refreshAll } from "../data/store";
+import { PreTest } from "../pretest/PreTest";
 import "./Onboarding.css";
 
-type Step = "intro" | "hours" | "level" | "subjects" | "uploads" | "parsing" | "review" | "done";
+type Step =
+  | "intro"
+  | "hours"
+  | "level"
+  | "subjects"
+  | "uploads"
+  | "parsing"
+  | "review"
+  | "pretest"
+  | "done";
 
 interface SubjectDraft {
   id: string;
@@ -14,7 +24,17 @@ interface SubjectDraft {
   errorMessage?: string;
 }
 
-const STEP_ORDER: Step[] = ["intro", "hours", "level", "subjects", "uploads", "parsing", "review", "done"];
+const STEP_ORDER: Step[] = [
+  "intro",
+  "hours",
+  "level",
+  "subjects",
+  "uploads",
+  "parsing",
+  "review",
+  "pretest",
+  "done",
+];
 
 function newDraft(name = ""): SubjectDraft {
   return {
@@ -35,6 +55,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     newDraft(""),
   ]);
   const [error, setError] = useState<string | null>(null);
+  const [pretestIdx, setPretestIdx] = useState(0);
+
+  const pretestQueue = useMemo(
+    () =>
+      drafts.filter(
+        (d) => d.status === "parsed" && typeof d.subjectId === "number",
+      ),
+    [drafts],
+  );
 
   const idx = STEP_ORDER.indexOf(step);
   const progress = ((idx + 1) / STEP_ORDER.length) * 100;
@@ -122,16 +151,33 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     setStep("review");
   };
 
-  const finish = async () => {
+  const saveProfileAndContinue = async () => {
     try {
       await window.api.profileSave({
         studyHoursPerWeek: hours,
         educationLevel: level,
       });
-      refreshAll();
-      onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save profile");
+      return;
+    }
+    const hasTestable = drafts.some(
+      (d) => d.status === "parsed" && typeof d.subjectId === "number",
+    );
+    setPretestIdx(0);
+    setStep(hasTestable ? "pretest" : "done");
+  };
+
+  const finish = () => {
+    refreshAll();
+    onDone();
+  };
+
+  const advancePretest = () => {
+    if (pretestIdx + 1 < pretestQueue.length) {
+      setPretestIdx(pretestIdx + 1);
+    } else {
+      setStep("done");
     }
   };
 
@@ -465,8 +511,41 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                 <button className="ghost" onClick={() => setStep("uploads")}>
                   ← Adjust
                 </button>
-                <button className="accent" onClick={finish}>
+                <button className="accent" onClick={saveProfileAndContinue}>
                   Save plan →
+                </button>
+              </div>
+            </section>
+          )}
+
+          {step === "pretest" && pretestQueue[pretestIdx] && (
+            <section className="onb__panel">
+              <p className="eyebrow">
+                Familiarity check {pretestIdx + 1} of {pretestQueue.length}
+              </p>
+              <PreTest
+                subjectId={pretestQueue[pretestIdx].subjectId!}
+                subjectName={pretestQueue[pretestIdx].name}
+                onDone={advancePretest}
+                onSkip={advancePretest}
+              />
+            </section>
+          )}
+
+          {step === "done" && (
+            <section className="onb__panel onb__panel--centered">
+              <p className="eyebrow">All set</p>
+              <h2 className="display onb__title onb__title--mid">
+                Your plan is saved.
+              </h2>
+              <p className="onb__lede">
+                Ally now has your subjects, deadlines, and a read on how
+                familiar each topic is. Open the dashboard whenever you're
+                ready to study.
+              </p>
+              <div className="onb__actions">
+                <button className="accent" onClick={finish}>
+                  Open dashboard →
                 </button>
               </div>
             </section>

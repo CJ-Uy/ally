@@ -25,9 +25,12 @@ const api: Window["api"] = {
       cursor?: string;
       delimitedPrefixes: string[];
     }>,
-  sessionStart: () => invoke<void>("session:start"),
+  sessionStart: (subject?: string) =>
+    invoke<void>("session:start", subject ? { subject } : undefined),
   sessionStop: () => invoke<void>("session:stop"),
   sessionGetState: () => invoke<SessionStateSnapshot>("session:getState"),
+  sessionSetSubject: (subject: string) =>
+    invoke<{ ok: true }>("session:setSubject", { subject }),
   chatSend: (text: string) =>
     invoke("chat:send", { text }) as Promise<{
       visibleText: string;
@@ -54,19 +57,47 @@ const api: Window["api"] = {
 
   schemaBootstrap: () => invoke<{ ok: boolean }>("schema:bootstrap"),
 
-  profileGet: () =>
-    invoke<{
-      id: number;
-      studyHoursPerWeek: number;
-      educationLevel: string;
-      onboardedAt: string;
-    } | null>("profile:get"),
+  profileGet: () => invoke<UserProfileDto | null>("profile:get"),
   profileSave: (payload) => invoke("profile:save", payload),
+  profileUpdateNotifications: (payload) =>
+    invoke<{
+      notifyAtRisk: boolean;
+      notifyDueToday: boolean;
+      notifyStreakDanger: boolean;
+      notifyChatResponse: boolean;
+    } | null>("profile:updateNotifications", payload),
+
+  activityToday: () =>
+    invoke<{
+      date: string;
+      sessionsCompleted: number;
+      breaksUsed: number;
+      streakDays: number;
+    }>("activity:today"),
 
   subjectsList: () => invoke("subjects:list"),
   subjectsCreate: (payload) => invoke("subjects:create", payload),
   subjectsUpdate: (id, patch) => invoke("subjects:update", { id, patch }),
   subjectsDelete: (id) => invoke("subjects:delete", { id }),
+  subjectsSetFamiliarity: (id, level) =>
+    invoke<{ ok: true }>("subjects:setFamiliarity", { id, level }),
+
+  preTestGenerate: (subjectId) =>
+    invoke<{
+      subjectId: number;
+      subjectName: string;
+      questions: Array<{
+        prompt: string;
+        choices: string[];
+        correctIndex: number;
+        band: "beginner" | "familiar" | "confident";
+      }>;
+    }>("pretest:generate", { subjectId }),
+  preTestSubmit: (payload) =>
+    invoke<{ familiarity: "beginner" | "familiar" | "confident" }>(
+      "pretest:submit",
+      payload,
+    ),
 
   syllabusPickPdf: () => invoke<string | null>("syllabus:pickPdf"),
   syllabusParseAndApply: (subjectId, filePath) =>

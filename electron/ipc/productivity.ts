@@ -3,14 +3,24 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { app } from "electron";
 import { bootstrapSchema } from "../data/bootstrap";
-import { getProfile, saveProfile } from "../data/profile";
+import {
+  getProfile,
+  saveProfile,
+  updateNotificationSettings,
+  type NotificationToggleKey,
+} from "../data/profile";
 import {
   createSubject,
   deleteSubject,
   listSubjects,
+  setSubjectFamiliarity,
   updateSubject,
+  type SubjectFamiliarity,
 } from "../data/subjects";
 import { saveSyllabus } from "../data/syllabi";
+import { currentStreakDays, getTodayActivity } from "../data/activity";
+import { generatePreTest, scorePreTest } from "../agent/preTest";
+import { notifyPlannerReply } from "../notifications";
 import {
   createTask,
   deleteTask,
@@ -148,6 +158,10 @@ export function registerProductivityIpc() {
           studyHoursPerWeek: p.studyHoursPerWeek,
           educationLevel: p.educationLevel,
           onboardedAt: p.onboardedAt.toISOString(),
+          notifyAtRisk: p.notifyAtRisk,
+          notifyDueToday: p.notifyDueToday,
+          notifyStreakDanger: p.notifyStreakDanger,
+          notifyChatResponse: p.notifyChatResponse,
         }
       : null;
   });
@@ -167,9 +181,55 @@ export function registerProductivityIpc() {
         studyHoursPerWeek: saved.studyHoursPerWeek,
         educationLevel: saved.educationLevel,
         onboardedAt: saved.onboardedAt.toISOString(),
+        notifyAtRisk: saved.notifyAtRisk,
+        notifyDueToday: saved.notifyDueToday,
+        notifyStreakDanger: saved.notifyStreakDanger,
+        notifyChatResponse: saved.notifyChatResponse,
       };
     },
   );
+
+  ipcMain.handle(
+    "profile:updateNotifications",
+    async (
+      _e,
+      payload: Partial<Record<NotificationToggleKey, boolean>>,
+    ) => {
+      const patch: Partial<Record<NotificationToggleKey, boolean>> = {};
+      const keys: NotificationToggleKey[] = [
+        "notifyAtRisk",
+        "notifyDueToday",
+        "notifyStreakDanger",
+        "notifyChatResponse",
+      ];
+      for (const k of keys) {
+        if (typeof payload[k] === "boolean") patch[k] = payload[k];
+      }
+      const updated = await updateNotificationSettings(patch);
+      return updated
+        ? {
+            notifyAtRisk: updated.notifyAtRisk,
+            notifyDueToday: updated.notifyDueToday,
+            notifyStreakDanger: updated.notifyStreakDanger,
+            notifyChatResponse: updated.notifyChatResponse,
+          }
+        : null;
+    },
+  );
+
+  // Activity / streaks
+  ipcMain.handle("activity:today", async () => {
+    const [activity, streak] = await Promise.all([
+      getTodayActivity(),
+      currentStreakDays(),
+    ]);
+    return {
+      date: activity.date,
+      sessionsCompleted: activity.sessionsCompleted,
+      breaksUsed: activity.breaksUsed,
+      streakDays: streak,
+    };
+  });
 
   // Subjects
   ipcMain.handle("subjects:list", async () => {
@@ -180,6 +240,7 @@ export function registerProductivityIpc() {
       educationLevel: r.educationLevel,
       color: r.color,
       createdAt: r.createdAt.toISOString(),
+      familiarity: r.familiarity ?? null,
     }));
   });
 
@@ -196,7 +257,48 @@ export function registerProductivityIpc() {
         educationLevel: row.educationLevel,
         color: row.color,
         createdAt: row.createdAt.toISOString(),
+        familiarity: row.familiarity ?? null,
       };
+    },
+  );
+
+  ipcMain.handle(
+    "subjects:setFamiliarity",
+    async (
+      _e,
+      payload: { id: number; level: SubjectFamiliarity | null },
+    ) => {
+      await setSubjectFamiliarity(payload.id, payload.level);
+      return { ok: true };
+    },
+  );
+
+  // Pre-test
+  ipcMain.handle(
+    "pretest:generate",
+    async (_e, payload: { subjectId: number }) => {
+      return generatePreTest(payload.subjectId);
+    },
+  );
+
+  ipcMain.handle(
+    "pretest:submit",
+    async (
+      _e,
+      payload: {
+        subjectId: number;
+        answers: Array<{ questionIndex: number; choiceIndex: number }>;
+        questions: Array<{
+          prompt: string;
+          choices: string[];
+          correctIndex: number;
+          band: "beginner" | "familiar" | "confident";
+        }>;
+      },
+    ) => {
+      const level = scorePreTest(payload.questions, payload.answers);
+      await setSubjectFamiliarity(payload.subjectId, level);
+      return { familiarity: level };
     },
   );
 
@@ -440,6 +542,9 @@ export function registerProductivityIpc() {
       const elapsed = Date.now() - started;
       console.log(`[planner:chat] completed in ${elapsed}ms`);
       plannerSession.history.push({ role: "model", text: reply.visibleText });
+      void notifyPlannerReply(reply.visibleText).catch((err) =>
+        console.warn("[planner:chat] notify failed:", err),
+      );
       return { visibleText: reply.visibleText };
     } catch (err) {
       const elapsed = Date.now() - started;

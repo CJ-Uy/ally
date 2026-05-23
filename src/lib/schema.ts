@@ -5,6 +5,18 @@ export const userProfile = sqliteTable("user_profile", {
   studyHoursPerWeek: integer("study_hours_per_week").notNull(),
   educationLevel: text("education_level").notNull(),
   onboardedAt: integer("onboarded_at", { mode: "timestamp_ms" }).notNull(),
+  notifyAtRisk: integer("notify_at_risk", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  notifyDueToday: integer("notify_due_today", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  notifyStreakDanger: integer("notify_streak_danger", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  notifyChatResponse: integer("notify_chat_response", { mode: "boolean" })
+    .notNull()
+    .default(false),
 });
 
 export const subjects = sqliteTable("subjects", {
@@ -13,6 +25,13 @@ export const subjects = sqliteTable("subjects", {
   educationLevel: text("education_level").notNull(),
   color: text("color").notNull(),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  familiarity: text("familiarity"),
+});
+
+export const dailyActivity = sqliteTable("daily_activity", {
+  date: text("date").primaryKey(),
+  sessionsCompleted: integer("sessions_completed").notNull().default(0),
+  breaksUsed: integer("breaks_used").notNull().default(0),
 });
 
 export const syllabi = sqliteTable("syllabi", {

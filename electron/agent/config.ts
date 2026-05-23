@@ -23,7 +23,10 @@ DECISION: {"granted": false}
 
 Only output the DECISION line when you've actually decided. Otherwise just continue the conversation normally.`,
   knowledge: {
-    mockContextPath: "mock-context.json",
+    source: "live Turso state via buildLiveContext()",
+    fallback: "mock-context.json",
+    shape:
+      "studySession, todayTasks, calendar, streaks, userProfile — see MockContext in electron/agent/context.ts",
   },
   triggers: ["on_lock_overlay_chat"],
 } as const;

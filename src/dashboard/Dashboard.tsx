@@ -10,15 +10,17 @@ import { TodayView } from "./TodayView";
 import { CalendarView } from "./CalendarView";
 import { TasksView } from "./TasksView";
 import { PlannerChat } from "./PlannerChat";
+import { SettingsView } from "./SettingsView";
 import "./Dashboard.css";
 
-type View = "today" | "calendar" | "tasks" | "planner";
+type View = "today" | "calendar" | "tasks" | "planner" | "settings";
 
 const NAV: Array<{ id: View; num: string; label: string; hint: string }> = [
   { id: "today", num: "01", label: "Today", hint: "what's on deck" },
   { id: "calendar", num: "02", label: "Calendar", hint: "weeks & months" },
   { id: "tasks", num: "03", label: "Tasks", hint: "by subject" },
   { id: "planner", num: "04", label: "Plan", hint: "talk to ally" },
+  { id: "settings", num: "05", label: "Settings", hint: "preferences" },
 ];
 
 export function Dashboard() {
@@ -139,6 +141,7 @@ export function Dashboard() {
             onPrefillConsumed={() => setPlannerPrefill(null)}
           />
         )}
+        {view === "settings" && <SettingsView />}
       </main>
     </div>
   );

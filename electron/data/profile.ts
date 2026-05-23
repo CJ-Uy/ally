@@ -7,11 +7,21 @@ export interface UserProfile {
   studyHoursPerWeek: number;
   educationLevel: string;
   onboardedAt: Date;
+  notifyAtRisk: boolean;
+  notifyDueToday: boolean;
+  notifyStreakDanger: boolean;
+  notifyChatResponse: boolean;
 }
+
+export type NotificationToggleKey =
+  | "notifyAtRisk"
+  | "notifyDueToday"
+  | "notifyStreakDanger"
+  | "notifyChatResponse";
 
 export async function getProfile(): Promise<UserProfile | null> {
   const rows = await db.select().from(userProfile).limit(1);
-  return rows[0] ?? null;
+  return (rows[0] as UserProfile | undefined) ?? null;
 }
 
 export async function saveProfile(input: {
@@ -44,7 +54,17 @@ export async function saveProfile(input: {
     })
     .returning();
 
-  return inserted;
+  return inserted as UserProfile;
+}
+
+export async function updateNotificationSettings(
+  patch: Partial<Record<NotificationToggleKey, boolean>>,
+): Promise<UserProfile | null> {
+  const existing = await getProfile();
+  if (!existing) return null;
+  if (Object.keys(patch).length === 0) return existing;
+  await db.update(userProfile).set(patch).where(eq(userProfile.id, existing.id));
+  return { ...existing, ...patch };
 }
 
 export async function clearProfile(): Promise<void> {

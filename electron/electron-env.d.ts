@@ -42,7 +42,19 @@ interface UserProfileDto {
   studyHoursPerWeek: number;
   educationLevel: string;
   onboardedAt: string;
+  notifyAtRisk: boolean;
+  notifyDueToday: boolean;
+  notifyStreakDanger: boolean;
+  notifyChatResponse: boolean;
 }
+
+type NotificationToggleKey =
+  | "notifyAtRisk"
+  | "notifyDueToday"
+  | "notifyStreakDanger"
+  | "notifyChatResponse";
+
+type SubjectFamiliarity = "beginner" | "familiar" | "confident";
 
 interface SubjectDto {
   id: number;
@@ -50,6 +62,27 @@ interface SubjectDto {
   educationLevel: string;
   color: string;
   createdAt: string;
+  familiarity: SubjectFamiliarity | null;
+}
+
+interface PreTestQuestionDto {
+  prompt: string;
+  choices: string[];
+  correctIndex: number;
+  band: SubjectFamiliarity;
+}
+
+interface PreTestPayloadDto {
+  subjectId: number;
+  subjectName: string;
+  questions: PreTestQuestionDto[];
+}
+
+interface ActivityTodayDto {
+  date: string;
+  sessionsCompleted: number;
+  breaksUsed: number;
+  streakDays: number;
 }
 
 interface TaskDto {
@@ -138,9 +171,10 @@ interface Window {
       cursor?: string;
       delimitedPrefixes: string[];
     }>;
-    sessionStart: () => Promise<void>;
+    sessionStart: (subject?: string) => Promise<void>;
     sessionStop: () => Promise<void>;
     sessionGetState: () => Promise<SessionStateSnapshot>;
+    sessionSetSubject: (subject: string) => Promise<{ ok: true }>;
     chatSend: (text: string) => Promise<ChatSendResult>;
     lockClose: () => Promise<void>;
     onStateUpdate: (cb: (snap: SessionStateSnapshot) => void) => Unsubscribe;
@@ -153,6 +187,16 @@ interface Window {
       studyHoursPerWeek: number;
       educationLevel: string;
     }) => Promise<UserProfileDto>;
+    profileUpdateNotifications: (
+      payload: Partial<Record<NotificationToggleKey, boolean>>,
+    ) => Promise<{
+      notifyAtRisk: boolean;
+      notifyDueToday: boolean;
+      notifyStreakDanger: boolean;
+      notifyChatResponse: boolean;
+    } | null>;
+
+    activityToday: () => Promise<ActivityTodayDto>;
 
     subjectsList: () => Promise<SubjectDto[]>;
     subjectsCreate: (payload: {
@@ -164,6 +208,17 @@ interface Window {
       patch: { name?: string; color?: string },
     ) => Promise<{ ok: true }>;
     subjectsDelete: (id: number) => Promise<{ ok: true }>;
+    subjectsSetFamiliarity: (
+      id: number,
+      level: SubjectFamiliarity | null,
+    ) => Promise<{ ok: true }>;
+
+    preTestGenerate: (subjectId: number) => Promise<PreTestPayloadDto>;
+    preTestSubmit: (payload: {
+      subjectId: number;
+      answers: Array<{ questionIndex: number; choiceIndex: number }>;
+      questions: PreTestQuestionDto[];
+    }) => Promise<{ familiarity: SubjectFamiliarity }>;
 
     syllabusPickPdf: () => Promise<string | null>;
     syllabusParseAndApply: (

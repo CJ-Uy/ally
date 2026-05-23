@@ -10,38 +10,43 @@ Built for the KPMG Academic Innovation Challenge 2026 (AI agents track). The loc
 
 | Scope | Status | Notes |
 |-------|--------|-------|
-| Scope 0 (orb + lock + negotiation) | ✅ Pre-existing | Untouched. Still uses `mock-context.json`. |
+| Scope 0 (orb + lock + negotiation) | ✅ Pre-existing | Prompt + agent config untouched. Now consumes live Turso context (see Scope 4). |
 | Scope 1 (Onboarding + Syllabus Parsing) | ✅ Done | Multi-step wizard, Gemini multimodal PDF parser, auto-creates tasks & events. |
 | Scope 2 (Calendar + Tasks + Planner Chat) | ✅ Done | Month/week calendar, per-subject task lists, Study Planner agent with 11 Gemini function-calling tools. |
 | Scope 3 (Smart AI Behaviors) | ✅ Done | 5 new planner tools (`suggest_next_task`, `check_at_risk`, `breakdown_task`, `estimate_duration`, `propose_reschedule`). At-risk items surfaced proactively in Today view with "Break down"/"Reschedule" CTAs that prefill the planner. |
-| Scope 4 (Wire real context into orb negotiation) | ⬜ Not started | Replace `mock-context.json` consumer with live Turso query. |
-| Scope 5 (Pre-test, persistence, notifications) | ⬜ Stretch, not started | — |
+| Scope 4 (Wire real context into orb negotiation) | ✅ Done | `buildLiveContext()` in `electron/agent/context.ts` returns the `MockContext` shape from live Turso queries; `mock-context.json` retained as fallback only. Session now tracks `currentSubject` (default `"general"`) + `elapsedMinutes`. |
+| Scope 5 (Pre-test, persistence, notifications) | ✅ Done | Pre-test agent (`electron/agent/preTest.ts`) — 3–5 banded MCQ per subject, deterministic scoring → `subject_familiarity`. Daily `daily_activity` table tracks completed sessions + breaks; `currentStreakDays()` consumed by negotiation context. Native Electron notifications for at-risk, due-today, streak-in-danger, and planner-reply, each toggleable in Settings (stored on `user_profile`). |
 
 ### Where the new code lives
 
 **Schema & data layer** (single source of truth: `electron/data/bootstrap.ts` raw DDL + `src/lib/schema.ts` Drizzle types — both must be edited together when changing the schema):
-- `src/lib/schema.ts` — Drizzle table definitions (`user_profile`, `subjects`, `syllabi`, `tasks`, `events`).
-- `electron/data/bootstrap.ts` — `CREATE TABLE IF NOT EXISTS` runs on Electron app start; logs `tables present: …` to the main-process console.
-- `electron/data/{profile,subjects,syllabi,tasks,events}.ts` — DAL functions.
+- `src/lib/schema.ts` — Drizzle table definitions (`user_profile`, `subjects`, `syllabi`, `tasks`, `events`, `daily_activity`). `user_profile` carries four notification toggles (`notify_at_risk`, `notify_due_today`, `notify_streak_danger`, `notify_chat_response`); `subjects` carries a nullable `familiarity` (`beginner | familiar | confident`).
+- `electron/data/bootstrap.ts` — `CREATE TABLE IF NOT EXISTS` runs on Electron app start; logs `tables present: …` to the main-process console. Also runs idempotent `ALTER TABLE ADD COLUMN` statements (swallowing duplicate-column errors) so installs that pre-date the Scope 5 columns get upgraded in place.
+- `electron/data/{profile,subjects,syllabi,tasks,events,activity}.ts` — DAL functions. `activity.ts` exposes `getTodayActivity()`, `recordCompletedSession()`, `recordBreakUsed()`, `currentStreakDays()`; all key off a `localDateKey()` (YYYY-MM-DD in local time) so the breaks counter resets at local midnight without a cron.
 
 **Agents** (all mirror the Copilot Studio shape — `name`, `description`, `instructions`, `knowledge`, `triggers` — see existing `electron/agent/config.ts` as the canonical template):
 - `electron/agent/syllabusParser.ts` — Gemini multimodal PDF parser. Returns structured deadlines, exams, grading breakdown, topics, difficulty.
-- `electron/agent/studyPlanner.ts` — Conversational planner with function-calling tools (`list_subjects`, `list_tasks`, `list_events`, `create_task`, `update_task`, `mark_task_done`, `delete_task`, `create_event`, `update_event`, `delete_event`, `get_user_context`). Includes 30s per-call SDK timeout and 60s outer timeout. Verbose logging on every Gemini round-trip.
-- `electron/agent/{config,context,gemini}.ts` — Study Guardian (negotiation) agent. Pre-existing. **Do not refactor without a reason — Scope 4 will edit `context.ts` to read from Turso.**
+- `electron/agent/studyPlanner.ts` — Conversational planner with function-calling tools. CRUD tools: `list_subjects`, `list_tasks`, `list_events`, `create_task`, `update_task`, `mark_task_done`, `delete_task`, `create_event`, `update_event`, `delete_event`, `get_user_context`. Smart-behavior tools (Scope 3): `suggest_next_task`, `check_at_risk`, `breakdown_task`, `estimate_duration`, `propose_reschedule`. Includes 30s per-call SDK timeout and 60s outer timeout. Verbose logging on every Gemini round-trip. Live snapshot now lists each subject with its `[familiarity: …]` tag; `estimate_duration` instructions tell the model to pad beginner / trim confident.
+- `electron/agent/preTest.ts` — **(Scope 5)** Pre-Test Author. Generates 3–5 casual MCQ per subject grounded in parsed syllabus topics. Each question is banded `beginner | familiar | confident`; `scorePreTest()` weights confident-band hits highest and maps the ratio to a familiarity level that's stored on `subjects.familiarity`.
+- `electron/data/analysis.ts` — Pure, LLM-free helpers used by both Scope 3 tools and the UI banner: `analyzeAtRiskTasks()` (overdue + insufficient-time-for-estimated-work), `rankNextTasks()` (urgency-sorted).
+- `electron/agent/{config,context,gemini}.ts` — Study Guardian (negotiation) agent. Pre-existing prompt + decision parser. **Scope 4 added `buildLiveContext()` in `context.ts`** which assembles the `MockContext` shape from live Turso queries (profile, today's tasks ∪ overdue, 7-day events, `currentStreakDays()`, `breaksUsedToday`). `gemini.ts` calls `buildLiveContext()` first and falls back to `readMockContext()` only on DB failure. The `agentConfig.knowledge` field documents this. The prompt itself is untouched.
+- `electron/notifications.ts` — **(Scope 5)** Native Electron `Notification` wrapper. Categories: `notifyAtRisk`, `notifyDueToday`, `notifyStreakDanger`, `notifyChatResponse`. Each gated on the matching `user_profile` toggle. `runAppOpenChecks()` fires on app start (at-risk always; due-today before noon; streak-danger after 4pm). `scheduleDailyChecks()` re-fires at the next 08:00 / 18:00 boundary.
 
 **IPC**:
-- `electron/ipc/productivity.ts` — All new IPC handlers (profile, subjects, syllabus parse, tasks, events, planner chat). Registered in `electron/main.ts` via `registerProductivityIpc()` after `app.whenReady`.
+- `electron/ipc/productivity.ts` — All new IPC handlers (profile incl. `profile:updateNotifications`, `activity:today`, subjects incl. `subjects:setFamiliarity`, syllabus parse, tasks, events, planner chat, `pretest:generate`, `pretest:submit`). Registered in `electron/main.ts` via `registerProductivityIpc()` after `app.whenReady`. Planner-reply notifications fire from this file after a successful `sendToPlanner()`.
+- `electron/main.ts` — Session IPC extended with `session:setSubject` and an optional `{subject}` payload on `session:start`. `session:stop` now calls `recordCompletedSession()`; the `chat:send` handler calls `recordBreakUsed()` when the negotiation grants a break. App bootstrap kicks off `runAppOpenChecks()` and `scheduleDailyChecks()` after the schema is ready.
 - `electron/preload.ts` — Bridge methods. Renderer-side types in `electron/electron-env.d.ts`.
 
 **Renderer**:
 - `src/App.tsx` — Routes between `<Onboarding>` (no profile) and `<Dashboard>` (profile saved) after `schemaBootstrap`. Aesthetic is editorial/paper (Fraunces + Geist, warm terracotta on cream — see `src/index.css` for tokens).
-- `src/onboarding/Onboarding.tsx` — 7-step wizard: intro → hours → level → subjects → uploads → parsing → review → done.
-- `src/dashboard/Dashboard.tsx` — Sidebar shell with Today/Calendar/Tasks/Plan nav, **diagnostic panel showing live subject/task/event counts + manual refresh button + visible error strip**, subject swatches, session panel.
-- `src/dashboard/{TodayView,CalendarView,TasksView,PlannerChat}.tsx` — Views.
-- `src/data/store.ts` — `useProfile/useSubjects/useTasks/useEvents/useTodayTasks/useUpcomingEvents` hooks + `dataBus` + `refreshAll()`. Hooks return `[value, reload, { value, reload, loading, error }]`. **Uses a `loaderRef` to keep `reload` stable across renders — do not re-introduce the bug where `loader` was a useCallback dep.**
+- `src/onboarding/Onboarding.tsx` — 9-step wizard: intro → hours → level → subjects → uploads → parsing → review → **pretest** → done. The pretest step iterates over parsed subjects, rendering `<PreTest>` for each; skip is allowed.
+- `src/pretest/PreTest.tsx` — **(Scope 5)** Generates and renders the familiarity check, submits answers, and shows the resulting band. Reused both in onboarding and in Settings ("Re-assess").
+- `src/dashboard/Dashboard.tsx` — Sidebar shell with Today/Calendar/Tasks/Plan/**Settings** nav, **diagnostic panel showing live subject/task/event counts + manual refresh button + visible error strip**, subject swatches, session panel.
+- `src/dashboard/{TodayView,CalendarView,TasksView,PlannerChat,SettingsView}.tsx` — Views. TodayView shows a "Needs attention" card (driven by `useAtRiskTasks`) with per-item "Break down"/"Reschedule" buttons that call `onAskAlly(prompt)` → Dashboard sets `plannerPrefill` and switches to the Plan view; PlannerChat consumes the prefill into its input on mount. **SettingsView** exposes the four notification toggles, a streak/sessions/breaks readout from `activity:today`, and a per-subject familiarity row with a "Re-assess" button that re-launches `<PreTest>` in place.
+- `src/data/store.ts` — `useProfile/useSubjects/useTasks/useEvents/useTodayTasks/useUpcomingEvents/useAtRiskTasks` hooks + `dataBus` + `refreshAll()`. Hooks return `[value, reload, { value, reload, loading, error }]`. **Uses a `loaderRef` to keep `reload` stable across renders — do not re-introduce the bug where `loader` was a useCallback dep.**
 
 **Scripts**:
-- `scripts/reset-db.mjs` — Drops all five tables in Turso. Run via `pnpm reset` (or `npm run reset`). After running, restart the app and you'll be back at onboarding.
+- `scripts/reset-db.mjs` — Drops all six tables in Turso (`tasks`, `events`, `syllabi`, `subjects`, `user_profile`, `daily_activity`). Run via `pnpm reset` (or `npm run reset`). After running, restart the app and you'll be back at onboarding.
 
 ### Conventions to keep
 
@@ -53,7 +58,10 @@ Built for the KPMG Academic Innovation Challenge 2026 (AI agents track). The loc
 ### Known gotchas
 
 - The renderer's `useReload` hook intentionally returns a 3-tuple `[value, reload, meta]`. Old callers using `const [x] = ...` still work; new callers can grab `meta.loading`/`meta.error`.
-- `mock-context.json` is still the source for the negotiation agent. Don't delete it until Scope 4 lands.
+- `mock-context.json` is now a fallback only — `buildLiveContext()` runs first. It's still on disk because the fallback path catches Turso/DAL errors at app start before the schema is ready. Don't delete it.
+- The session's `currentSubject` defaults to `"general"` and lives in process memory; it's set via `session:start({subject})` or `session:setSubject`. No UI surfaces this yet beyond the negotiation context.
+- `daily_activity` keys on `YYYY-MM-DD` in **local time**, not UTC, so the breaks counter and streak boundary follow the user's wall clock without a scheduled job. `currentStreakDays()` survives a day with zero sessions only on today itself — if today has no session and yesterday did, the streak still counts; two zero days in a row breaks it.
+- Schema upgrades for existing installs use bare `ALTER TABLE ADD COLUMN` statements in `bootstrap.ts` with a try/catch around them. SQLite has no `ADD COLUMN IF NOT EXISTS`, so the "duplicate column" error on re-runs is expected and is swallowed silently. New columns must be added to **both** the `CREATE TABLE` block (for fresh installs) **and** the `ALTERS` list (for upgrades).
 - Turso credentials and `GEMINI_API_KEY` are in `.env` (gitignored). The existing orb code already reads them, so they're known to load correctly via `dotenv/config` at the top of `electron/main.ts`.
 
 ## What's Already Built (Scope 0 — Context Only)

@@ -24,6 +24,7 @@ interface InternalState {
     startedAt: number | null;
     pausedAt: number | null;
     totalPausedMs: number;
+    currentSubject: string;
   };
   break: {
     active: boolean;
@@ -35,8 +36,16 @@ interface InternalState {
   currentLockKeyword: string | null;
 }
 
+const DEFAULT_SUBJECT = "general";
+
 const state: InternalState = {
-  session: { active: false, startedAt: null, pausedAt: null, totalPausedMs: 0 },
+  session: {
+    active: false,
+    startedAt: null,
+    pausedAt: null,
+    totalPausedMs: 0,
+    currentSubject: DEFAULT_SUBJECT,
+  },
   break: { active: false, endsAt: null, forKeyword: null },
   graces: {},
   conversationHistory: [],
@@ -48,11 +57,13 @@ export function clampMinutes(minutes: number): number {
   return Math.max(1, Math.min(20, Math.floor(minutes)));
 }
 
-export function startSession() {
+export function startSession(subject?: string) {
   state.session.active = true;
   state.session.startedAt = Date.now();
   state.session.pausedAt = null;
   state.session.totalPausedMs = 0;
+  state.session.currentSubject =
+    subject && subject.trim().length > 0 ? subject.trim() : DEFAULT_SUBJECT;
   state.break = { active: false, endsAt: null, forKeyword: null };
   state.graces = {};
   state.conversationHistory = [];
@@ -65,6 +76,7 @@ export function stopSession() {
     startedAt: null,
     pausedAt: null,
     totalPausedMs: 0,
+    currentSubject: DEFAULT_SUBJECT,
   };
   state.break = { active: false, endsAt: null, forKeyword: null };
   state.graces = {};
@@ -74,6 +86,26 @@ export function stopSession() {
 
 export function isSessionActive(): boolean {
   return state.session.active;
+}
+
+export function setSessionSubject(subject: string) {
+  state.session.currentSubject =
+    subject.trim().length > 0 ? subject.trim() : DEFAULT_SUBJECT;
+}
+
+export function getCurrentSubject(): string {
+  return state.session.currentSubject;
+}
+
+export function elapsedMinutes(): number {
+  const snap = snapshot();
+  return Math.floor(snap.session.elapsedMs / 60_000);
+}
+
+export function sessionStartedAtIso(): string | null {
+  return state.session.startedAt
+    ? new Date(state.session.startedAt).toISOString()
+    : null;
 }
 
 export function pauseForNegotiation(keyword: string) {

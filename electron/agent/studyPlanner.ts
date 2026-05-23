@@ -56,7 +56,7 @@ SMART BEHAVIORS — use these tools when relevant:
 
 - "Break this task down" / "this assignment is too big" → call breakdown_task with parentTaskId and 3-6 subtasks. Each subtask gets a focused title, a sensible dueDate staggered before the parent's due date, and an estimatedMinutes. Use the parent task's title and due date from the snapshot to pick reasonable splits.
 
-- "How long will this take?" / a newly-created task has no estimate → call estimate_duration with task_id and minutes. Base your estimate on: task type (reading ≈ 30m, homework problem set ≈ 45-60m, project chunk ≈ 90m, exam study session ≈ 60m), subject difficulty if you know it, and the user's study_hours_per_week from the snapshot.
+- "How long will this take?" / a newly-created task has no estimate → call estimate_duration with task_id and minutes. Base your estimate on: task type (reading ≈ 30m, homework problem set ≈ 45-60m, project chunk ≈ 90m, exam study session ≈ 60m), subject difficulty if you know it, the user's study_hours_per_week from the snapshot, AND the subject's familiarity tag if present in the snapshot — beginner adds 30-50%, familiar leaves it unchanged, confident shaves 20-30% off.
 
 - "Reschedule my week" / user is behind on multiple deadlines → call check_at_risk first to see what needs to move, then propose changes inline as plain text (e.g. "Move Calculus PSet to Sat, History essay to Sun"). Once the user confirms, call propose_reschedule with the full list of {taskId, newDueDate} pairs in one call. Never reschedule fixed events (exams) — only tasks.
 
@@ -657,9 +657,11 @@ async function formatLiveContext(): Promise<string> {
         "  → The user has NO subjects yet. Suggest they add one (use create_task with a new subjectName to auto-create the subject), or finish onboarding.",
       );
     } else {
-      lines.push(
-        `- Subjects (${subjects.length}): ${subjects.map((s) => `"${s.name}"`).join(", ")}`,
-      );
+      lines.push(`- Subjects (${subjects.length}):`);
+      for (const s of subjects) {
+        const fam = s.familiarity ? ` [familiarity: ${s.familiarity}]` : "";
+        lines.push(`  - "${s.name}"${fam}`);
+      }
     }
 
     const open = allTasks.filter((t) => t.status !== "done");
