@@ -1,3 +1,67 @@
+.atrisk {
+  border-color: var(--terra);
+  background: linear-gradient(0deg, rgba(199, 82, 42, 0.04), rgba(199, 82, 42, 0.04)),
+    var(--card);
+}
+
+.atrisk__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.atrisk__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px dashed var(--line-soft);
+}
+.atrisk__item:last-child {
+  border-bottom: 0;
+}
+
+.atrisk__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.atrisk__title {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.atrisk__meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+}
+
+.atrisk__reason {
+  color: var(--terra-deep);
+}
+
+.atrisk__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.atrisk__more {
+  margin-top: 8px;
+  justify-self: start;
+}
+
 .today {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);

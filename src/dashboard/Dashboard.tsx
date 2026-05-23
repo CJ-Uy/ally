@@ -23,9 +23,15 @@ const NAV: Array<{ id: View; num: string; label: string; hint: string }> = [
 
 export function Dashboard() {
   const [view, setView] = useState<View>("today");
+  const [plannerPrefill, setPlannerPrefill] = useState<string | null>(null);
   const [subjects, , subjectsMeta] = useSubjects();
   const [tasks, , tasksMeta] = useTasks();
   const [events, , eventsMeta] = useEvents();
+
+  const askAlly = (prompt: string) => {
+    setPlannerPrefill(prompt);
+    setView("planner");
+  };
 
   const openTasks = tasks.filter((t) => t.status !== "done").length;
   const doneTasks = tasks.filter((t) => t.status === "done").length;
@@ -124,10 +130,15 @@ export function Dashboard() {
       </aside>
 
       <main className="dash__main">
-        {view === "today" && <TodayView />}
+        {view === "today" && <TodayView onAskAlly={askAlly} />}
         {view === "calendar" && <CalendarView />}
         {view === "tasks" && <TasksView />}
-        {view === "planner" && <PlannerChat />}
+        {view === "planner" && (
+          <PlannerChat
+            prefill={plannerPrefill}
+            onPrefillConsumed={() => setPlannerPrefill(null)}
+          />
+        )}
       </main>
     </div>
   );

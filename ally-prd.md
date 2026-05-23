@@ -13,7 +13,7 @@ Built for the KPMG Academic Innovation Challenge 2026 (AI agents track). The loc
 | Scope 0 (orb + lock + negotiation) | ✅ Pre-existing | Untouched. Still uses `mock-context.json`. |
 | Scope 1 (Onboarding + Syllabus Parsing) | ✅ Done | Multi-step wizard, Gemini multimodal PDF parser, auto-creates tasks & events. |
 | Scope 2 (Calendar + Tasks + Planner Chat) | ✅ Done | Month/week calendar, per-subject task lists, Study Planner agent with 11 Gemini function-calling tools. |
-| Scope 3 (Smart AI Behaviors) | ⬜ Not started | Auto-reschedule, suggest-next, subtask breakdown, duration estimation, at-risk flagging. |
+| Scope 3 (Smart AI Behaviors) | ✅ Done | 5 new planner tools (`suggest_next_task`, `check_at_risk`, `breakdown_task`, `estimate_duration`, `propose_reschedule`). At-risk items surfaced proactively in Today view with "Break down"/"Reschedule" CTAs that prefill the planner. |
 | Scope 4 (Wire real context into orb negotiation) | ⬜ Not started | Replace `mock-context.json` consumer with live Turso query. |
 | Scope 5 (Pre-test, persistence, notifications) | ⬜ Stretch, not started | — |
 

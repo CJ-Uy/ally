@@ -1,6 +1,24 @@
 import { useMemo } from "react";
-import { refreshAll, useSubjects, useTasks, useUpcomingEvents } from "../data/store";
+import {
+  refreshAll,
+  useAtRiskTasks,
+  useSubjects,
+  useTasks,
+  useUpcomingEvents,
+} from "../data/store";
 import "./TodayView.css";
+
+interface Props {
+  onAskAlly?: (prompt: string) => void;
+}
+
+function fmtDuration(minutes: number): string {
+  const m = Math.abs(minutes);
+  if (m < 60) return `${m}m`;
+  const hours = m / 60;
+  if (hours < 24) return `${Math.round(hours)}h`;
+  return `${Math.round(hours / 24)}d`;
+}
 
 function startOfDay(d = new Date()) {
   const x = new Date(d);
@@ -38,10 +56,11 @@ const FULL_DAY = new Date().toLocaleDateString([], {
   day: "numeric",
 });
 
-export function TodayView() {
+export function TodayView({ onAskAlly }: Props = {}) {
   const [tasks] = useTasks();
   const [events] = useUpcomingEvents();
   const [subjects] = useSubjects();
+  const [atRisk] = useAtRiskTasks();
 
   const subjectMap = useMemo(() => {
     return new Map(subjects.map((s) => [s.id, s] as const));
@@ -106,6 +125,71 @@ export function TodayView() {
           </span>
         </div>
       </header>
+
+      {atRisk.length > 0 && (
+        <section className="card atrisk">
+          <div className="card__head">
+            <h3 className="card__title">Needs attention</h3>
+            <span className="view-sub">{atRisk.length} at risk</span>
+          </div>
+          <ul className="atrisk__list">
+            {atRisk.slice(0, 4).map((a) => {
+              const subj = subjectMap.get(a.subjectId);
+              const reasonText =
+                a.reason === "overdue"
+                  ? `Overdue by ${fmtDuration(a.minutesUntilDue)}`
+                  : `Only ${fmtDuration(a.minutesUntilDue)} left — ~${a.estimatedMinutes}m of work`;
+              return (
+                <li key={a.taskId} className="atrisk__item">
+                  <div className="atrisk__body">
+                    <div className="atrisk__title">{a.title}</div>
+                    <div className="atrisk__meta">
+                      {subj && (
+                        <span style={{ color: subj.color }}>● {subj.name}</span>
+                      )}
+                      <span className="atrisk__reason">{reasonText}</span>
+                    </div>
+                  </div>
+                  {onAskAlly && (
+                    <div className="atrisk__actions">
+                      <button
+                        className="ghost"
+                        onClick={() =>
+                          onAskAlly(
+                            `Break "${a.title}" down into subtasks I can finish before it's due.`,
+                          )
+                        }
+                      >
+                        Break down
+                      </button>
+                      <button
+                        className="accent"
+                        onClick={() =>
+                          onAskAlly(
+                            `"${a.title}" is at risk — help me reschedule it.`,
+                          )
+                        }
+                      >
+                        Reschedule
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {atRisk.length > 4 && onAskAlly && (
+            <button
+              className="ghost atrisk__more"
+              onClick={() =>
+                onAskAlly("Walk me through everything that's at risk right now.")
+              }
+            >
+              Ask Ally about all {atRisk.length}
+            </button>
+          )}
+        </section>
+      )}
 
       <div className="today">
         <section className="card today__main">

@@ -89,6 +89,10 @@ export function useUpcomingEvents() {
   );
 }
 
+export function useAtRiskTasks() {
+  return useReload<AtRiskItemDto[]>(() => window.api.tasksAtRisk(), []);
+}
+
 export function refreshAll() {
   dataBus.notify();
 }

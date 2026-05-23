@@ -108,6 +108,18 @@ interface PlannerChatTurn {
   text: string;
 }
 
+interface AtRiskItemDto {
+  taskId: number;
+  title: string;
+  subjectId: number;
+  subjectName: string;
+  dueDate: string;
+  estimatedMinutes: number;
+  minutesUntilDue: number;
+  reason: "overdue" | "insufficient_time";
+  shortfallMinutes: number;
+}
+
 type Unsubscribe = () => void;
 
 // Used in Renderer process, expose in `preload.ts`
@@ -162,6 +174,7 @@ interface Window {
     tasksList: () => Promise<TaskDto[]>;
     tasksListToday: () => Promise<TaskDto[]>;
     tasksListOverdue: () => Promise<TaskDto[]>;
+    tasksAtRisk: () => Promise<AtRiskItemDto[]>;
     tasksListForSubject: (subjectId: number) => Promise<TaskDto[]>;
     tasksCreate: (payload: {
       subjectId: number;

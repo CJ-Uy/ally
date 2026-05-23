@@ -30,31 +30,42 @@ import {
   type CalendarEvent,
   type EventType,
 } from "../data/events";
+import { analyzeAtRiskTasks, rankNextTasks } from "../data/analysis";
 
 export const studyPlannerAgent = {
   name: "Study Planner",
   description:
     "An AI agent that helps the user manage their study plan — creating, updating, and organizing tasks and calendar events through conversation.",
-  instructions: `You are Study Planner, the user's study assistant. You manage their academic tasks and calendar.
+  instructions: `You are Study Planner, the user's study assistant. You manage their academic tasks and calendar, and proactively help them stay on top of their work.
 
 CRITICAL: ALWAYS reply with a visible message to the user. Never return an empty response. If you do nothing else, at least acknowledge the user's message in one sentence.
 
-Tone: warm, concise, and direct. No filler. Confirm destructive actions (delete, bulk update) in one short sentence before executing.
+Tone: warm, concise, and direct. No filler. Confirm destructive actions (delete, bulk update, reschedule multiple tasks) in one short sentence before executing.
 
-A LIVE USER STATE snapshot is provided in the system context at the start of every turn — use it as your primary source of truth. You do NOT need to call list_subjects / list_tasks / list_events for read-only queries; the answer is already in the context. Only call tools when you need to mutate state (create, update, delete, mark done) or when the user explicitly asks for fresh data.
+A LIVE USER STATE snapshot is provided in the system context at the start of every turn — use it as your primary source of truth. You do NOT need to call list_subjects / list_tasks / list_events for read-only queries; the answer is already in the context. Only call tools when you need to mutate state (create, update, delete, mark done) or when you need analyzed data (at-risk, ranked next tasks).
 
 If the snapshot says "Subjects: none": the user has no subjects yet. Tell them so and offer to create one directly (call create_task with a new subjectName — the system will auto-create the subject) or suggest they add a syllabus.
 
 If subjects exist but tasks are empty: tell the user and offer to add one.
 
-When the user asks "what should I work on next?": use the snapshot's open task list. Recommend ONE concrete task by id, considering deadlines (closer = higher priority) and workload (estimated_minutes), with a one-sentence reason. If there are no open tasks, say so.
+SMART BEHAVIORS — use these tools when relevant:
+
+- "What should I work on next?" / "What's most urgent?" → call suggest_next_task. Pick ONE candidate from its ranked list, name it by id, and explain in one sentence why (urgency + workload). Do not invent tasks.
+
+- "What's at risk?" / "Am I behind?" / "What's overdue?" → call check_at_risk. Report each at-risk item with its title, subject, and the reason (overdue by Xh, or only Yh left but ~Zm of work needed). If the list is empty, say so plainly.
+
+- "Break this task down" / "this assignment is too big" → call breakdown_task with parentTaskId and 3-6 subtasks. Each subtask gets a focused title, a sensible dueDate staggered before the parent's due date, and an estimatedMinutes. Use the parent task's title and due date from the snapshot to pick reasonable splits.
+
+- "How long will this take?" / a newly-created task has no estimate → call estimate_duration with task_id and minutes. Base your estimate on: task type (reading ≈ 30m, homework problem set ≈ 45-60m, project chunk ≈ 90m, exam study session ≈ 60m), subject difficulty if you know it, and the user's study_hours_per_week from the snapshot.
+
+- "Reschedule my week" / user is behind on multiple deadlines → call check_at_risk first to see what needs to move, then propose changes inline as plain text (e.g. "Move Calculus PSet to Sat, History essay to Sun"). Once the user confirms, call propose_reschedule with the full list of {taskId, newDueDate} pairs in one call. Never reschedule fixed events (exams) — only tasks.
 
 When creating tasks or events:
 - Use subject names exactly as shown in the snapshot when referring to existing subjects. Use a new name to create a new subject.
 - If the user gives a relative date ("tomorrow", "next Friday"), resolve it to a calendar date using the current date in the system context.
-- If estimated_minutes is missing for a new task, pick a sensible default based on task type (homework ≈ 45, reading ≈ 30, project chunk ≈ 90).
+- If estimated_minutes is missing for a new task, set it via estimate_duration after creating, or include it inline.
 
-After a successful tool call, confirm what you did in one short sentence ("Added 'Read chapter 4' to Calculus, due Friday."). Do not dump JSON at the user.
+After a successful tool call, confirm what you did in one short sentence ("Added 'Read chapter 4' to Calculus, due Friday." or "Broke 'Final project' into 4 subtasks across this week."). Do not dump JSON at the user.
 
 If a tool call fails, tell the user what went wrong in plain English. Don't retry the same call without changing inputs.`,
   knowledge: {
@@ -223,6 +234,100 @@ const tools: FunctionDeclaration[] = [
     parameters: {
       type: SchemaType.OBJECT,
       properties: {},
+    },
+  },
+  {
+    name: "suggest_next_task",
+    description:
+      "Return the top open tasks ranked by urgency (deadline distance, overdue status). Use when the user asks what to work on next.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        limit: {
+          type: SchemaType.NUMBER,
+          description: "How many candidates to return (default 5).",
+        },
+      },
+    },
+  },
+  {
+    name: "check_at_risk",
+    description:
+      "Scan all open tasks and return those at risk: either overdue, or where remaining time is less than estimated work. Use when the user asks what's at risk, what's overdue, or whether they're behind.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {},
+    },
+  },
+  {
+    name: "breakdown_task",
+    description:
+      "Break a parent task into subtasks. Creates each subtask with parentTaskId pointing at the parent. Use when the user flags a task as too big or asks to break it down.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        parentTaskId: { type: SchemaType.NUMBER },
+        subtasks: {
+          type: SchemaType.ARRAY,
+          description: "3-6 focused subtasks staggered before the parent's due date.",
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              title: { type: SchemaType.STRING },
+              dueDate: {
+                type: SchemaType.STRING,
+                description: "ISO 8601 date or datetime",
+              },
+              estimatedMinutes: { type: SchemaType.NUMBER },
+              description: { type: SchemaType.STRING },
+            },
+            required: ["title"],
+          },
+        },
+      },
+      required: ["parentTaskId", "subtasks"],
+    },
+  },
+  {
+    name: "estimate_duration",
+    description:
+      "Set or update a task's estimatedMinutes. Use when a task has no estimate or the user asks how long something will take.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        taskId: { type: SchemaType.NUMBER },
+        minutes: { type: SchemaType.NUMBER },
+        reasoning: {
+          type: SchemaType.STRING,
+          description: "One short sentence explaining the estimate (not stored, just for logging).",
+        },
+      },
+      required: ["taskId", "minutes"],
+    },
+  },
+  {
+    name: "propose_reschedule",
+    description:
+      "Apply a batch of new due dates to existing tasks. Only call after the user has confirmed the proposed plan in conversation. Never reschedules events.",
+    parameters: {
+      type: SchemaType.OBJECT,
+      properties: {
+        proposals: {
+          type: SchemaType.ARRAY,
+          items: {
+            type: SchemaType.OBJECT,
+            properties: {
+              taskId: { type: SchemaType.NUMBER },
+              newDueDate: {
+                type: SchemaType.STRING,
+                description: "ISO 8601 date or datetime",
+              },
+            },
+            required: ["taskId", "newDueDate"],
+          },
+        },
+      },
+      required: ["proposals"],
     },
   },
 ];
@@ -426,6 +531,95 @@ async function runTool(name: string, args: ToolArgs): Promise<unknown> {
         overdueCount: overdue.length,
         subjectCount: (await listSubjects()).length,
       };
+    }
+    case "suggest_next_task": {
+      const limit = asNumber(args.limit) ?? 5;
+      const candidates = await rankNextTasks(limit);
+      return { candidates };
+    }
+    case "check_at_risk": {
+      const items = await analyzeAtRiskTasks();
+      return { count: items.length, items };
+    }
+    case "breakdown_task": {
+      const parentTaskId = asNumber(args.parentTaskId);
+      if (parentTaskId === undefined) return { error: "parentTaskId is required" };
+      const parent = await getTask(parentTaskId);
+      if (!parent) return { error: `task ${parentTaskId} not found` };
+
+      const rawSubtasks = Array.isArray(args.subtasks) ? args.subtasks : [];
+      if (rawSubtasks.length === 0) return { error: "subtasks array is required" };
+
+      const created: Array<ReturnType<typeof compactTask>> = [];
+      const subj = await getSubject(parent.subjectId);
+      const subjName = subj?.name ?? "Unknown";
+
+      for (const raw of rawSubtasks) {
+        if (!raw || typeof raw !== "object") continue;
+        const s = raw as ToolArgs;
+        const title = asString(s.title);
+        if (!title) continue;
+        const task = await createTask({
+          subjectId: parent.subjectId,
+          title,
+          description: asString(s.description) ?? null,
+          dueDate: parseDate(s.dueDate) ?? null,
+          estimatedMinutes: asNumber(s.estimatedMinutes) ?? null,
+          parentTaskId: parent.id,
+          createdBy: "ai",
+        });
+        created.push(compactTask(task, subjName));
+      }
+
+      return {
+        parent: compactTask(parent, subjName),
+        created,
+        count: created.length,
+      };
+    }
+    case "estimate_duration": {
+      const taskId = asNumber(args.taskId);
+      const minutes = asNumber(args.minutes);
+      if (taskId === undefined || minutes === undefined) {
+        return { error: "taskId and minutes are required" };
+      }
+      const reasoning = asString(args.reasoning);
+      if (reasoning) console.log(`[planner] estimate_duration task ${taskId}: ${minutes}m — ${reasoning}`);
+      const updated = await updateTask(taskId, { estimatedMinutes: minutes });
+      if (!updated) return { error: `task ${taskId} not found` };
+      const subj = await getSubject(updated.subjectId);
+      return compactTask(updated, subj?.name ?? "Unknown");
+    }
+    case "propose_reschedule": {
+      const raw = Array.isArray(args.proposals) ? args.proposals : [];
+      if (raw.length === 0) return { error: "proposals array is required" };
+
+      const applied: Array<ReturnType<typeof compactTask>> = [];
+      const failed: Array<{ taskId: number; reason: string }> = [];
+
+      for (const p of raw) {
+        if (!p || typeof p !== "object") continue;
+        const proposal = p as ToolArgs;
+        const taskId = asNumber(proposal.taskId);
+        const newDue = parseDate(proposal.newDueDate);
+        if (taskId === undefined) {
+          failed.push({ taskId: -1, reason: "missing taskId" });
+          continue;
+        }
+        if (!newDue) {
+          failed.push({ taskId, reason: "invalid newDueDate" });
+          continue;
+        }
+        const updated = await updateTask(taskId, { dueDate: newDue });
+        if (!updated) {
+          failed.push({ taskId, reason: "task not found" });
+          continue;
+        }
+        const subj = await getSubject(updated.subjectId);
+        applied.push(compactTask(updated, subj?.name ?? "Unknown"));
+      }
+
+      return { applied, failed, appliedCount: applied.length };
     }
     default:
       return { error: `unknown tool: ${name}` };

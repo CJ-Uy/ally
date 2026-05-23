@@ -31,6 +31,7 @@ import {
 } from "../data/events";
 import { parseSyllabusPdf } from "../agent/syllabusParser";
 import { sendToPlanner } from "../agent/studyPlanner";
+import { analyzeAtRiskTasks } from "../data/analysis";
 
 interface PlannerChat {
   history: Array<{ role: "user" | "model"; text: string }>;
@@ -269,6 +270,10 @@ export function registerProductivityIpc() {
   ipcMain.handle("tasks:listOverdue", async () => {
     const rows = await listOverdueTasks();
     return rows.map(serializeTask);
+  });
+
+  ipcMain.handle("tasks:atRisk", async () => {
+    return analyzeAtRiskTasks();
   });
 
   ipcMain.handle(

@@ -14,7 +14,12 @@ const STARTERS = [
   "Mark my reading task as done.",
 ];
 
-export function PlannerChat() {
+interface Props {
+  prefill?: string | null;
+  onPrefillConsumed?: () => void;
+}
+
+export function PlannerChat({ prefill, onPrefillConsumed }: Props = {}) {
   const [history, setHistory] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -23,6 +28,13 @@ export function PlannerChat() {
   useEffect(() => {
     void window.api.plannerHistory().then((h) => setHistory(h));
   }, []);
+
+  useEffect(() => {
+    if (prefill) {
+      setInput(prefill);
+      onPrefillConsumed?.();
+    }
+  }, [prefill, onPrefillConsumed]);
 
   useEffect(() => {
     const el = scrollerRef.current;

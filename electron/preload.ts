@@ -75,6 +75,7 @@ const api: Window["api"] = {
   tasksList: () => invoke("tasks:list"),
   tasksListToday: () => invoke("tasks:listToday"),
   tasksListOverdue: () => invoke("tasks:listOverdue"),
+  tasksAtRisk: () => invoke("tasks:atRisk"),
   tasksListForSubject: (subjectId) =>
     invoke("tasks:listForSubject", { subjectId }),
   tasksCreate: (payload) => invoke("tasks:create", payload),
