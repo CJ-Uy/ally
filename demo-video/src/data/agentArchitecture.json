@@ -1,0 +1,109 @@
+{
+  "title": "Academic Ally Agent Architecture",
+  "subtitle": "One parent orchestrator coordinates five specialist agents.",
+  "flow": [
+    "Student",
+    "Academic Ally Parent Orchestrator",
+    "Specialist Agents",
+    "Electron App Dashboard"
+  ],
+  "orchestrator": {
+    "name": "Academic Ally Parent Orchestrator",
+    "summary": "Manages the conversation, chooses the correct specialist agent, summarizes outputs, and asks for confirmation before important data is saved.",
+    "inputs": [
+      "Student goals",
+      "Uploaded syllabi",
+      "Diagnostic answers",
+      "Progress updates"
+    ],
+    "outputs": [
+      "Confirmed profile",
+      "Reviewed course data",
+      "Prioritized work",
+      "Calendar and focus actions"
+    ]
+  },
+  "agents": [
+    {
+      "name": "Student Profile & Onboarding Agent",
+      "shortName": "Profile",
+      "accent": "#4F78B8",
+      "responsibilities": [
+        "Education level",
+        "Weekly study hours",
+        "Availability",
+        "Preferences and goals"
+      ],
+      "exampleInput": "College student, 15 study hours per week, evenings preferred.",
+      "exampleOutput": "Profile saved with realistic planning limits."
+    },
+    {
+      "name": "Syllabus & Course Intelligence Agent",
+      "shortName": "Syllabus",
+      "accent": "#EF8F5A",
+      "responsibilities": [
+        "Detect courses",
+        "Extract deadlines",
+        "Identify grading weights",
+        "Flag uncertain information"
+      ],
+      "exampleInput": "Three syllabus PDFs uploaded together.",
+      "exampleOutput": "Courses, deadlines, weights, and uncertain items are extracted for review."
+    },
+    {
+      "name": "Learner Diagnostic Agent",
+      "shortName": "Diagnostic",
+      "accent": "#6FB399",
+      "responsibilities": [
+        "Topic familiarity",
+        "Light pre-test questions",
+        "Starting skill level",
+        "Difficulty signals"
+      ],
+      "exampleInput": "Matrices: somewhat familiar. Cell structure: familiar.",
+      "exampleOutput": "Familiarity scores inform the workload plan."
+    },
+    {
+      "name": "Workload Planning Agent",
+      "shortName": "Planner",
+      "accent": "#9674C7",
+      "responsibilities": [
+        "Urgency",
+        "Grading weight",
+        "Difficulty",
+        "Available study time"
+      ],
+      "exampleInput": "Three graded requirements due within three days.",
+      "exampleOutput": "High-risk workload is ranked by urgency, weight, difficulty, and progress."
+    },
+    {
+      "name": "Execution & Accountability Agent",
+      "shortName": "Execution",
+      "accent": "#D66F80",
+      "responsibilities": [
+        "Global to-do list",
+        "Calendar blocks",
+        "Focus sessions",
+        "Break decisions and reflections"
+      ],
+      "exampleInput": "Student asks to skip a focus block because they barely slept.",
+      "exampleOutput": "Break request is weighed against deadlines and progress before rescheduling."
+    }
+  ],
+  "guardrails": [
+    "Route each request to the correct specialist agent.",
+    "Flag uncertain syllabus information instead of inventing missing details.",
+    "Ask for confirmation before saving tasks, schedules, reminders, or focus sessions.",
+    "Explain why a task is prioritized so the student can trust the plan."
+  ],
+  "dashboardOutputs": [
+    "Academic profile",
+    "Course folders",
+    "Extracted requirements",
+    "Workload risk",
+    "Global to-do list",
+    "Calendar blocks",
+    "Focus sessions",
+    "Progress reflection"
+  ]
+}

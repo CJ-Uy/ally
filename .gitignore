@@ -17,6 +17,11 @@ dist-ssr
 dist-electron
 *.local
 
+# Generated demo video assets
+demo-video/out/
+demo-video/captures/
+demo-video/public/captures/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

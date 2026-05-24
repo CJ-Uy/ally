@@ -1,0 +1,374 @@
+[
+  {
+    "id": "01-onboarding-profile",
+    "title": "Onboarding profile",
+    "durationSeconds": 9,
+    "captures": [
+      "01-onboarding-profile-01.png",
+      "01-onboarding-profile-02.png",
+      "01-onboarding-profile-03.png"
+    ],
+    "motion": {
+      "captureStarts": [0, 0.3, 0.62],
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.25, "x": 0.61, "y": 0.56, "scale": 1.07 },
+        { "at": 0.48, "x": 0.43, "y": 0.42, "scale": 1.08 },
+        { "at": 0.72, "x": 0.6, "y": 0.35, "scale": 1.07 },
+        { "at": 1, "x": 0.5, "y": 0.52, "scale": 1.02 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.6, "y": 0.47 },
+        { "at": 0.2, "x": 0.68, "y": 0.565 },
+        { "at": 0.39, "x": 0.36, "y": 0.46 },
+        { "at": 0.67, "x": 0.602, "y": 0.32 },
+        { "at": 0.86, "x": 0.68, "y": 0.44 }
+      ],
+      "clicks": [
+        { "at": 0.2, "x": 0.68, "y": 0.565, "label": "Begin" },
+        { "at": 0.39, "x": 0.36, "y": 0.46, "label": "15 hrs/week" },
+        { "at": 0.67, "x": 0.602, "y": 0.32, "label": "College" },
+        { "at": 0.86, "x": 0.68, "y": 0.44, "label": "Next" }
+      ],
+      "highlights": [
+        { "at": 0.32, "duration": 0.22, "x": 0.298, "y": 0.33, "w": 0.405, "h": 0.095 },
+        { "at": 0.63, "duration": 0.24, "x": 0.503, "y": 0.263, "w": 0.199, "h": 0.115 }
+      ]
+    }
+  },
+  {
+    "id": "02-syllabus-upload",
+    "title": "Syllabus upload",
+    "durationSeconds": 7,
+    "captures": [
+      "02-syllabus-upload-01.png",
+      "02-syllabus-upload-02.png"
+    ],
+    "motion": {
+      "captureStarts": [0, 0.43],
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.32, "x": 0.49, "y": 0.44, "scale": 1.08 },
+        { "at": 0.62, "x": 0.59, "y": 0.43, "scale": 1.08 },
+        { "at": 1, "x": 0.5, "y": 0.56, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.42, "y": 0.39 },
+        { "at": 0.25, "x": 0.681, "y": 0.557 },
+        { "at": 0.52, "x": 0.668, "y": 0.462 },
+        { "at": 0.8, "x": 0.667, "y": 0.558 }
+      ],
+      "clicks": [
+        { "at": 0.25, "x": 0.681, "y": 0.557, "label": "Next" },
+        { "at": 0.52, "x": 0.668, "y": 0.462, "label": "Review file" },
+        { "at": 0.8, "x": 0.667, "y": 0.558, "label": "Parse syllabi" }
+      ],
+      "highlights": [
+        { "at": 0.08, "duration": 0.28, "x": 0.298, "y": 0.308, "w": 0.404, "h": 0.143 },
+        { "at": 0.48, "duration": 0.32, "x": 0.298, "y": 0.292, "w": 0.404, "h": 0.203 }
+      ]
+    }
+  },
+  {
+    "id": "03-syllabus-review",
+    "title": "Syllabus review",
+    "durationSeconds": 7,
+    "captures": [
+      "03-syllabus-review-01.png",
+      "03-syllabus-review-02.png"
+    ],
+    "motion": {
+      "captureStarts": [0, 0.52],
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.52, "scale": 1.02 },
+        { "at": 0.38, "x": 0.5, "y": 0.38, "scale": 1.08 },
+        { "at": 0.76, "x": 0.5, "y": 0.38, "scale": 1.07 },
+        { "at": 1, "x": 0.52, "y": 0.52, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.1, "x": 0.5, "y": 0.36 },
+        { "at": 0.38, "x": 0.49, "y": 0.36 },
+        { "at": 0.68, "x": 0.5, "y": 0.42 },
+        { "at": 0.88, "x": 0.5, "y": 0.42 }
+      ],
+      "clicks": [
+        { "at": 0.68, "x": 0.5, "y": 0.42, "label": "Confirm" }
+      ],
+      "highlights": [
+        { "at": 0.2, "duration": 0.36, "x": 0.428, "y": 0.285, "w": 0.143, "h": 0.152 },
+        { "at": 0.58, "duration": 0.32, "x": 0.298, "y": 0.286, "w": 0.376, "h": 0.24 }
+      ]
+    }
+  },
+  {
+    "id": "04-diagnostic-pretest",
+    "title": "Diagnostic pre-test",
+    "durationSeconds": 7,
+    "captures": [
+      "04-diagnostic-pretest-01.png",
+      "04-diagnostic-pretest-02.png"
+    ],
+    "motion": {
+      "captureStarts": [0, 0.66],
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.52, "scale": 1.02 },
+        { "at": 0.38, "x": 0.48, "y": 0.5, "scale": 1.08 },
+        { "at": 0.74, "x": 0.5, "y": 0.48, "scale": 1.08 },
+        { "at": 1, "x": 0.52, "y": 0.58, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.1, "x": 0.52, "y": 0.475 },
+        { "at": 0.32, "x": 0.48, "y": 0.478 },
+        { "at": 0.52, "x": 0.632, "y": 0.824 },
+        { "at": 0.8, "x": 0.486, "y": 0.486 }
+      ],
+      "clicks": [
+        { "at": 0.32, "x": 0.48, "y": 0.478, "label": "Somewhat familiar" },
+        { "at": 0.52, "x": 0.632, "y": 0.824, "label": "Save" },
+        { "at": 0.8, "x": 0.486, "y": 0.486, "label": "Done" }
+      ],
+      "highlights": [
+        { "at": 0.2, "duration": 0.32, "x": 0.308, "y": 0.414, "w": 0.355, "h": 0.126 },
+        { "at": 0.62, "duration": 0.28, "x": 0.31, "y": 0.369, "w": 0.363, "h": 0.156 }
+      ]
+    }
+  },
+  {
+    "id": "05-subjects",
+    "title": "Subjects",
+    "durationSeconds": 6,
+    "captures": ["05-subjects-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.34, "x": 0.35, "y": 0.18, "scale": 1.08 },
+        { "at": 0.62, "x": 0.75, "y": 0.18, "scale": 1.08 },
+        { "at": 1, "x": 0.47, "y": 0.56, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.053, "y": 0.209 },
+        { "at": 0.28, "x": 0.163, "y": 0.228 },
+        { "at": 0.54, "x": 0.594, "y": 0.228 },
+        { "at": 0.82, "x": 0.775, "y": 0.367 }
+      ],
+      "clicks": [
+        { "at": 0.28, "x": 0.163, "y": 0.228, "label": "Open" },
+        { "at": 0.54, "x": 0.594, "y": 0.228, "label": "Open" },
+        { "at": 0.82, "x": 0.775, "y": 0.367, "label": "Add subject" }
+      ],
+      "highlights": [
+        { "at": 0.16, "duration": 0.32, "x": 0.139, "y": 0.092, "w": 0.419, "h": 0.168 },
+        { "at": 0.48, "duration": 0.3, "x": 0.566, "y": 0.092, "w": 0.419, "h": 0.168 }
+      ]
+    }
+  },
+  {
+    "id": "06-tasks",
+    "title": "Tasks",
+    "durationSeconds": 6,
+    "captures": ["06-tasks-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.49, "y": 0.5, "scale": 1.02 },
+        { "at": 0.32, "x": 0.49, "y": 0.24, "scale": 1.08 },
+        { "at": 0.64, "x": 0.49, "y": 0.54, "scale": 1.07 },
+        { "at": 1, "x": 0.5, "y": 0.62, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.181, "y": 0.132 },
+        { "at": 0.28, "x": 0.158, "y": 0.247 },
+        { "at": 0.56, "x": 0.158, "y": 0.547 },
+        { "at": 0.86, "x": 0.562, "y": 0.78 }
+      ],
+      "clicks": [
+        { "at": 0.08, "x": 0.181, "y": 0.132, "label": "Group by subject" },
+        { "at": 0.28, "x": 0.158, "y": 0.247, "label": "Select task" },
+        { "at": 0.56, "x": 0.158, "y": 0.547, "label": "Select task" }
+      ],
+      "highlights": [
+        { "at": 0.2, "duration": 0.32, "x": 0.14, "y": 0.17, "w": 0.844, "h": 0.227 },
+        { "at": 0.5, "duration": 0.32, "x": 0.14, "y": 0.41, "w": 0.844, "h": 0.227 }
+      ]
+    }
+  },
+  {
+    "id": "07-calendar",
+    "title": "Calendar",
+    "durationSeconds": 6,
+    "captures": ["07-calendar-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.28, "x": 0.823, "y": 0.055, "scale": 1.07 },
+        { "at": 0.58, "x": 0.2, "y": 0.84, "scale": 1.08 },
+        { "at": 1, "x": 0.55, "y": 0.58, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.823, "y": 0.055 },
+        { "at": 0.28, "x": 0.958, "y": 0.055 },
+        { "at": 0.56, "x": 0.196, "y": 0.812 },
+        { "at": 0.86, "x": 0.576, "y": 0.802 }
+      ],
+      "clicks": [
+        { "at": 0.08, "x": 0.823, "y": 0.055, "label": "Month" },
+        { "at": 0.28, "x": 0.958, "y": 0.055, "label": "Ask Ally" },
+        { "at": 0.56, "x": 0.196, "y": 0.812, "label": "Due today" }
+      ],
+      "highlights": [
+        { "at": 0.44, "duration": 0.36, "x": 0.14, "y": 0.77, "w": 0.117, "h": 0.149 },
+        { "at": 0.68, "duration": 0.26, "x": 0.261, "y": 0.77, "w": 0.118, "h": 0.149 }
+      ]
+    }
+  },
+  {
+    "id": "08-today-risk",
+    "title": "Today risk",
+    "durationSeconds": 6,
+    "captures": ["08-today-risk-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.28, "x": 0.54, "y": 0.18, "scale": 1.08 },
+        { "at": 0.6, "x": 0.44, "y": 0.46, "scale": 1.07 },
+        { "at": 1, "x": 0.83, "y": 0.46, "scale": 1.05 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.058, "y": 0.11 },
+        { "at": 0.26, "x": 0.5, "y": 0.214 },
+        { "at": 0.52, "x": 0.163, "y": 0.479 },
+        { "at": 0.84, "x": 0.792, "y": 0.448 }
+      ],
+      "clicks": [
+        { "at": 0.52, "x": 0.163, "y": 0.479, "label": "Check off" },
+        { "at": 0.84, "x": 0.792, "y": 0.448, "label": "Calendar context" }
+      ],
+      "highlights": [
+        { "at": 0.16, "duration": 0.34, "x": 0.14, "y": 0.115, "w": 0.845, "h": 0.202 },
+        { "at": 0.54, "duration": 0.3, "x": 0.15, "y": 0.386, "w": 0.536, "h": 0.19 },
+        { "at": 0.74, "duration": 0.22, "x": 0.707, "y": 0.332, "w": 0.278, "h": 0.15 }
+      ]
+    }
+  },
+  {
+    "id": "09-focus-session",
+    "title": "Focus session",
+    "durationSeconds": 6,
+    "captures": ["09-focus-session-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.48, "scale": 1.02 },
+        { "at": 0.28, "x": 0.562, "y": 0.365, "scale": 1.08 },
+        { "at": 0.58, "x": 0.48, "y": 0.62, "scale": 1.07 },
+        { "at": 1, "x": 0.55, "y": 0.8, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.562, "y": 0.365 },
+        { "at": 0.3, "x": 0.562, "y": 0.365 },
+        { "at": 0.56, "x": 0.456, "y": 0.594 },
+        { "at": 0.84, "x": 0.286, "y": 0.797 }
+      ],
+      "clicks": [
+        { "at": 0.3, "x": 0.562, "y": 0.365, "label": "Begin session" },
+        { "at": 0.56, "x": 0.456, "y": 0.594, "label": "Pick goal" },
+        { "at": 0.84, "x": 0.286, "y": 0.797, "label": "Blocked apps" }
+      ],
+      "highlights": [
+        { "at": 0.2, "duration": 0.3, "x": 0.497, "y": 0.341, "w": 0.131, "h": 0.05 },
+        { "at": 0.46, "duration": 0.28, "x": 0.45, "y": 0.58, "w": 0.223, "h": 0.07 },
+        { "at": 0.72, "duration": 0.24, "x": 0.15, "y": 0.782, "w": 0.825, "h": 0.125 }
+      ]
+    }
+  },
+  {
+    "id": "10-lock-backout",
+    "title": "Lock backout",
+    "durationSeconds": 8,
+    "captures": [
+      "10-lock-backout-01.png",
+      "10-lock-backout-02.png"
+    ],
+    "motion": {
+      "captureStarts": [0, 0.48],
+      "camera": [
+        { "at": 0, "x": 0.52, "y": 0.5, "scale": 1.02 },
+        { "at": 0.3, "x": 0.56, "y": 0.94, "scale": 1.08 },
+        { "at": 0.58, "x": 0.86, "y": 0.18, "scale": 1.07 },
+        { "at": 1, "x": 0.47, "y": 0.22, "scale": 1.05 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.54, "y": 0.938 },
+        { "at": 0.32, "x": 0.955, "y": 0.948 },
+        { "at": 0.56, "x": 0.913, "y": 0.172 },
+        { "at": 0.88, "x": 0.382, "y": 0.218 }
+      ],
+      "clicks": [
+        { "at": 0.32, "x": 0.955, "y": 0.948, "label": "Send request" },
+        { "at": 0.56, "x": 0.913, "y": 0.172, "label": "Student message" }
+      ],
+      "highlights": [
+        { "at": 0.12, "duration": 0.3, "x": 0.161, "y": 0.916, "w": 0.818, "h": 0.064 },
+        { "at": 0.5, "duration": 0.26, "x": 0.85, "y": 0.153, "w": 0.129, "h": 0.038 },
+        { "at": 0.68, "duration": 0.26, "x": 0.16, "y": 0.199, "w": 0.436, "h": 0.039 }
+      ]
+    }
+  },
+  {
+    "id": "11-session-reflection",
+    "title": "Session reflection",
+    "durationSeconds": 6,
+    "captures": ["11-session-reflection-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.34, "x": 0.5, "y": 0.49, "scale": 1.08 },
+        { "at": 0.62, "x": 0.5, "y": 0.61, "scale": 1.07 },
+        { "at": 1, "x": 0.5, "y": 0.71, "scale": 1.04 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.5, "y": 0.49 },
+        { "at": 0.3, "x": 0.5, "y": 0.49 },
+        { "at": 0.56, "x": 0.5, "y": 0.61 },
+        { "at": 0.86, "x": 0.536, "y": 0.712 }
+      ],
+      "clicks": [
+        { "at": 0.3, "x": 0.5, "y": 0.49, "label": "Progress summary" },
+        { "at": 0.56, "x": 0.5, "y": 0.61, "label": "Reflection note" },
+        { "at": 0.86, "x": 0.536, "y": 0.712, "label": "Another session" }
+      ],
+      "highlights": [
+        { "at": 0.18, "duration": 0.34, "x": 0.426, "y": 0.477, "w": 0.148, "h": 0.07 },
+        { "at": 0.5, "duration": 0.32, "x": 0.393, "y": 0.555, "w": 0.214, "h": 0.12 }
+      ]
+    }
+  },
+  {
+    "id": "12-dashboard",
+    "title": "Dashboard",
+    "durationSeconds": 6,
+    "captures": ["12-dashboard-01.png"],
+    "motion": {
+      "camera": [
+        { "at": 0, "x": 0.5, "y": 0.5, "scale": 1.02 },
+        { "at": 0.3, "x": 0.562, "y": 0.365, "scale": 1.08 },
+        { "at": 0.68, "x": 0.55, "y": 0.62, "scale": 1.06 },
+        { "at": 1, "x": 0.5, "y": 0.5, "scale": 1.02 }
+      ],
+      "cursor": [
+        { "at": 0.08, "x": 0.058, "y": 0.078 },
+        { "at": 0.28, "x": 0.562, "y": 0.365 },
+        { "at": 0.52, "x": 0.456, "y": 0.594 },
+        { "at": 0.82, "x": 0.286, "y": 0.797 }
+      ],
+      "clicks": [
+        { "at": 0.28, "x": 0.562, "y": 0.365, "label": "Start focus" },
+        { "at": 0.52, "x": 0.456, "y": 0.594, "label": "Today goals" },
+        { "at": 0.82, "x": 0.286, "y": 0.797, "label": "Blocked list" }
+      ],
+      "highlights": [
+        { "at": 0.18, "duration": 0.3, "x": 0.497, "y": 0.341, "w": 0.131, "h": 0.05 },
+        { "at": 0.48, "duration": 0.32, "x": 0.45, "y": 0.58, "w": 0.223, "h": 0.07 },
+        { "at": 0.72, "duration": 0.24, "x": 0.15, "y": 0.782, "w": 0.825, "h": 0.125 }
+      ]
+    }
+  }
+]
