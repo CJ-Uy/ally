@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { refreshAll, useActivityToday, useProfile, useSubjects } from "../data/store";
 
-type SettingsTab = "profile" | "notifications" | "subjects" | "ai" | "data";
+type SettingsTab = "profile" | "notifications" | "subjects" | "ai" | "data" | "mobile";
 
 const NOTIFICATION_ITEMS: { key: NotificationToggleKey; label: string; description: string }[] = [
   {
@@ -414,6 +415,139 @@ function AiAgentsTab() {
   );
 }
 
+function MobileTab() {
+  const [code, setCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<"qr" | "text">("qr");
+
+  const load = async () => {
+    if (!window.api?.mobilePairingCode) return;
+    setLoading(true);
+    try {
+      const result = await window.api.mobilePairingCode();
+      setCode(result);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = () => {
+    if (!code) return;
+    void navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="settings-stack">
+      <div className="settings-card">
+        <div className="settings-card__label">Pair Ally Mobile</div>
+        <div className="settings-card__hint" style={{ marginBottom: 12 }}>
+          Open the Ally mobile app, tap <strong>Pair with Desktop</strong>, then scan the QR or paste the text code.
+          The code grants the app read access to your Turso database — treat it like a password.
+        </div>
+        {!code ? (
+          <button
+            type="button"
+            className="btn btn--sm"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            {loading ? "Generating…" : "Show pairing code"}
+          </button>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                type="button"
+                className={`btn btn--sm${view === "qr" ? " btn--primary" : ""}`}
+                onClick={() => setView("qr")}
+              >
+                QR Code
+              </button>
+              <button
+                type="button"
+                className={`btn btn--sm${view === "text" ? " btn--primary" : ""}`}
+                onClick={() => setView("text")}
+              >
+                Text code
+              </button>
+            </div>
+
+            {view === "qr" ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "16px",
+                  background: "#ffffff",
+                  borderRadius: 12,
+                  border: "1px solid var(--line)",
+                }}
+              >
+                <QRCodeSVG
+                  value={code}
+                  size={220}
+                  level="M"
+                  marginSize={2}
+                  bgColor="#ffffff"
+                  fgColor="#1e2a3d"
+                />
+                <div style={{ fontSize: 11, color: "var(--ink-soft)", textAlign: "center" }}>
+                  Open Ally mobile → Pair → Scan QR
+                </div>
+              </div>
+            ) : (
+              <textarea
+                readOnly
+                value={code}
+                rows={5}
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  background: "var(--bg)",
+                  color: "var(--ink)",
+                  resize: "none",
+                  wordBreak: "break-all",
+                  lineHeight: 1.5,
+                }}
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+              />
+            )}
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="btn btn--primary btn--sm" onClick={copy}>
+                {copied ? "Copied!" : "Copy text code"}
+              </button>
+              <button type="button" className="btn btn--sm" onClick={() => setCode(null)}>
+                Hide
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-card">
+        <div className="settings-card__label">How it works</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "var(--ink-soft)", fontSize: 13 }}>
+          <div>1. Install the Ally mobile APK on your Android device.</div>
+          <div>2. Tap <strong style={{ color: "var(--ink)" }}>Pair with Desktop</strong> → scan the QR or paste the text code.</div>
+          <div>3. Grant Usage Access + Display-over-other-apps when prompted (for the app blocker).</div>
+          <div>4. The app will notify you 30 min before scheduled study blocks and when a session starts on this computer.</div>
+          <div>5. During an active session, distracting apps will be blocked. Tap <strong style={{ color: "var(--ink)" }}>Negotiate with Ally</strong> to request a break.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DataTab() {
   const [activity] = useActivityToday();
   const [resetting, setResetting] = useState(false);
@@ -481,6 +615,7 @@ export function SettingsPage() {
     { id: "subjects", label: "Subjects" },
     { id: "ai", label: "AI Agents" },
     { id: "data", label: "Activity" },
+    { id: "mobile", label: "Mobile" },
   ];
 
   return (
@@ -510,6 +645,7 @@ export function SettingsPage() {
       {tab === "subjects" && <SubjectsTab />}
       {tab === "ai" && <AiAgentsTab />}
       {tab === "data" && <DataTab />}
+      {tab === "mobile" && <MobileTab />}
     </div>
   );
 }

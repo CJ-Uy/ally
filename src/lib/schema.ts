@@ -64,6 +64,27 @@ export const tasks = sqliteTable("tasks", {
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+export const sessionSync = sqliteTable("session_sync", {
+  id: integer("id").primaryKey(),
+  active: integer("active", { mode: "boolean" }).notNull().default(false),
+  subject: text("subject"),
+  startedAt: integer("started_at", { mode: "timestamp_ms" }),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const negotiations = sqliteTable("negotiations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  source: text("source").notNull().default("mobile"),
+  blockedApp: text("blocked_app").notNull(),
+  userMessage: text("user_message").notNull(),
+  conversation: text("conversation"),
+  status: text("status").notNull().default("pending"),
+  minutesGranted: integer("minutes_granted"),
+  aiReply: text("ai_reply"),
+  requestedAt: integer("requested_at", { mode: "timestamp_ms" }).notNull(),
+  respondedAt: integer("responded_at", { mode: "timestamp_ms" }),
+});
+
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   subjectId: integer("subject_id")

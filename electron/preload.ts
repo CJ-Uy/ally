@@ -132,6 +132,8 @@ const api: Window["api"] = {
   plannerChat: (text) => invoke("planner:chat", { text }),
   plannerHistory: () => invoke("planner:history"),
   plannerReset: () => invoke("planner:reset"),
+
+  mobilePairingCode: () => invoke<string | null>("mobile:pairingCode"),
 };
 
 contextBridge.exposeInMainWorld("api", api);

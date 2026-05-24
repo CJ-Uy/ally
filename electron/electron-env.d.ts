@@ -298,5 +298,7 @@ interface Window {
     plannerChat: (text: string) => Promise<{ visibleText: string }>;
     plannerHistory: () => Promise<PlannerChatTurn[]>;
     plannerReset: () => Promise<{ ok: true }>;
+
+    mobilePairingCode: () => Promise<string | null>;
   };
 }

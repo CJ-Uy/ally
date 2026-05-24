@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Ally",
+    "slug": "ally-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ally",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#eef2f7",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#eef2f7"
+    },
+    "android": {
+      "package": "com.ally.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#eef2f7"
+      },
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS",
+        "SYSTEM_ALERT_WINDOW",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_SPECIAL_USE",
+        "QUERY_ALL_PACKAGES",
+        "CAMERA"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "ally" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#4a6fa5",
+          "defaultChannel": "ally"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Ally uses the camera to scan the pairing QR code from your desktop."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "14074106-2219-4b68-bd4d-f7b2599a3dc3"
+      }
+    }
+  }
+}

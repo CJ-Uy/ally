@@ -22,7 +22,9 @@ import { sendToAgent } from "./agent/gemini";
 import { getAiStatus } from "./agent/llm";
 import { createLockWindow, createOrbWindow } from "./windows";
 import { startPoller, stopPoller } from "./poller";
+import { startNegotiationsPoller, stopNegotiationsPoller } from "./data/negotiations-poller";
 import { registerProductivityIpc } from "./ipc/productivity";
+import { upsertSessionSync } from "./data/session-sync";
 import { bootstrapSchema } from "./data/bootstrap";
 import { recordBreakUsed, recordCompletedSession } from "./data/activity";
 import {
@@ -113,7 +115,6 @@ function createWindow() {
     minHeight: 640,
     backgroundColor: "#f5f7fb",
     show: false,
-    fullscreen: true,
     icon: path.join(process.env.VITE_PUBLIC, "ally.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -141,6 +142,7 @@ function createWindow() {
   });
 
   win.once("ready-to-show", () => {
+    win?.maximize();
     win?.show();
     win?.focus();
   });
@@ -215,6 +217,7 @@ function bootstrap() {
         console.warn("[notifications] app-open checks failed:", err);
       });
       scheduleDailyChecks();
+      startNegotiationsPoller();
     })
     .catch((err) => {
       console.error("[bootstrap] schema init failed:", err);
@@ -241,6 +244,7 @@ app.whenReady().then(() => {
 
 app.on("before-quit", () => {
   stopPoller();
+  stopNegotiationsPoller();
 });
 
 ipcMain.handle("app:ping", async () => "pong");
@@ -272,6 +276,7 @@ ipcMain.handle("session:start", async (_event, payload?: unknown) => {
         ? String((payload as { subject: unknown }).subject ?? "")
         : "";
     startSession(subject);
+    void upsertSessionSync(true, subject || null, Date.now());
     broadcastState();
   }
 });
@@ -280,6 +285,7 @@ ipcMain.handle("session:stop", async () => {
   if (isSessionActive()) {
     stopSession();
     closeLockWindow();
+    void upsertSessionSync(false, null, null);
     try {
       await recordCompletedSession();
     } catch (err) {
@@ -361,6 +367,13 @@ ipcMain.handle("db:health", async () => {
 });
 
 ipcMain.handle("ai:status", async () => getAiStatus());
+
+ipcMain.handle("mobile:pairingCode", async () => {
+  const url = process.env.TURSO_DATABASE_URL ?? "";
+  const token = process.env.TURSO_AUTH_TOKEN ?? "";
+  if (!url || !token) return null;
+  return Buffer.from(`${url}\n${token}`).toString("base64");
+});
 
 ipcMain.handle(
   "r2:list",

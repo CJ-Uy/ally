@@ -549,6 +549,7 @@ export function installDemoApiIfNeeded() {
       },
     ],
     plannerReset: async () => ({ ok: true }),
+    mobilePairingCode: async () => null,
   };
 
   window.api = api;

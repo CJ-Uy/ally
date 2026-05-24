@@ -1,0 +1,31 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+
+  <!-- Read foreground app via UsageStatsManager -->
+  <uses-permission
+    android:name="android.permission.PACKAGE_USAGE_STATS"
+    tools:ignore="ProtectedPermissions" />
+
+  <!-- Draw overlay over other apps (this is the real "blocker") -->
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+  <!-- Foreground service to keep blocking alive when app is backgrounded -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+  <!-- Query installed packages on Android 11+ -->
+  <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+    tools:ignore="QueryAllPackagesPermission" />
+
+  <application>
+    <service
+      android:name="expo.modules.appblocker.BlockerService"
+      android:enabled="true"
+      android:exported="false"
+      android:foregroundServiceType="specialUse">
+      <property
+        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="App focus blocking during study sessions" />
+    </service>
+  </application>
+</manifest>

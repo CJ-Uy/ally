@@ -6,7 +6,6 @@ import {
   spring,
   staticFile,
   useCurrentFrame,
-  useVideoConfig,
 } from "remotion";
 import architecture from "../data/agentArchitecture.json";
 
@@ -729,7 +728,6 @@ function ClosingStage({ frame }: { frame: number }) {
 
 export function AgentArchitectureClip() {
   const frame = useCurrentFrame();
-  const { width, height } = useVideoConfig();
 
   return (
     <AbsoluteFill

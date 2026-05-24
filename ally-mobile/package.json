@@ -1,0 +1,33 @@
+{
+  "name": "ally-mobile",
+  "version": "1.0.0",
+  "main": "node_modules/expo/AppEntry.js",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "build:apk": "eas build -p android --profile preview"
+  },
+  "dependencies": {
+    "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
+    "@expo-google-fonts/onest": "^0.4.1",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "expo": "~53.0.0",
+    "expo-background-fetch": "~13.1.6",
+    "expo-camera": "~16.1.0",
+    "expo-font": "~13.3.2",
+    "expo-linking": "~7.1.4",
+    "expo-notifications": "~0.31.5",
+    "expo-status-bar": "~2.2.0",
+    "expo-task-manager": "~13.1.6",
+    "react": "19.0.0",
+    "react-native": "0.79.6",
+    "react-native-qrcode-svg": "^6.3.0",
+    "react-native-svg": "15.11.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "~19.0.10",
+    "typescript": "~5.8.3"
+  }
+}
