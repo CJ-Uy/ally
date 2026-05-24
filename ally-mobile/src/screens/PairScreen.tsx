@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,6 +14,8 @@ import {
 import { decodePairingCode } from "../lib/pairing";
 import { savePairing } from "../lib/storage";
 import { testConnection } from "../lib/turso";
+
+const allyImage = require("../../assets/ally.png");
 
 interface Props {
   onPaired: () => void;
@@ -27,14 +30,14 @@ export default function PairScreen({ onPaired }: Props) {
     setError(null);
     const pairing = decodePairingCode(code);
     if (!pairing) {
-      setError("Invalid pairing code. Copy it fresh from Ally Settings → Mobile.");
+      setError("Invalid code. Copy it fresh from Ally Settings → Mobile.");
       return;
     }
     setLoading(true);
     try {
       const ok = await testConnection(pairing);
       if (!ok) {
-        setError("Could not reach your Ally database. Check your internet connection.");
+        setError("Could not reach your database. Check your internet connection.");
         return;
       }
       await savePairing(pairing);
@@ -54,19 +57,20 @@ export default function PairScreen({ onPaired }: Props) {
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.foxBadge}>
-            <Text style={styles.foxEmoji}>🦊</Text>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <View style={styles.imageWrap}>
+            <Image source={allyImage} style={styles.allyImage} resizeMode="contain" />
           </View>
           <Text style={styles.title}>Ally Mobile</Text>
           <Text style={styles.subtitle}>
-            Connect to your desktop to get study reminders.
+            Your study companion on the go. Pair with your desktop to get session alerts and study reminders.
           </Text>
         </View>
 
-        {/* Card */}
+        {/* Pairing card */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>Pairing code</Text>
           <Text style={styles.cardHint}>
@@ -76,10 +80,7 @@ export default function PairScreen({ onPaired }: Props) {
           <TextInput
             style={[styles.input, error ? styles.inputError : null]}
             value={code}
-            onChangeText={(t) => {
-              setCode(t);
-              setError(null);
-            }}
+            onChangeText={(t) => { setCode(t); setError(null); }}
             placeholder="Paste your pairing code here…"
             placeholderTextColor="#6b7a93"
             multiline
@@ -92,7 +93,7 @@ export default function PairScreen({ onPaired }: Props) {
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity
-            style={[styles.btn, loading && styles.btnDisabled]}
+            style={[styles.btn, (loading || code.trim().length === 0) && styles.btnDisabled]}
             onPress={() => void handlePair()}
             disabled={loading || code.trim().length === 0}
             activeOpacity={0.8}
@@ -100,7 +101,7 @@ export default function PairScreen({ onPaired }: Props) {
             {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.btnText}>Connect</Text>
+              <Text style={styles.btnText}>Connect to Ally</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -111,8 +112,8 @@ export default function PairScreen({ onPaired }: Props) {
           {[
             "Open the Ally desktop app",
             "Go to Settings (bottom of the sidebar)",
-            'Click the "Mobile" tab',
-            'Press "Show pairing code" and copy it',
+            "Click the \"Mobile\" tab",
+            "Press \"Show pairing code\" and copy it",
           ].map((step, i) => (
             <View key={i} style={styles.stepRow}>
               <View style={styles.stepBadge}>
@@ -131,28 +132,39 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: "#eef2f7" },
   container: {
     flexGrow: 1,
-    padding: 20,
-    paddingTop: 60,
+    padding: 24,
+    paddingTop: 56,
     gap: 16,
+    paddingBottom: 48,
   },
-  header: {
+
+  hero: {
     alignItems: "center",
     marginBottom: 8,
-    gap: 10,
+    gap: 12,
   },
-  foxBadge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  imageWrap: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: "#f9fbfd",
     borderWidth: 1.5,
     borderColor: "#dde5ee",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+    shadowColor: "#4a6fa5",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  foxEmoji: { fontSize: 36 },
+  allyImage: {
+    width: 90,
+    height: 90,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
     color: "#1e2a3d",
     letterSpacing: -0.5,
@@ -161,38 +173,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6b7a93",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 22,
+    maxWidth: 300,
   },
+
   card: {
     backgroundColor: "#f9fbfd",
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#dde5ee",
-    padding: 18,
-    gap: 10,
+    padding: 20,
+    gap: 12,
   },
   cardLabel: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     color: "#6b7a93",
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   cardHint: {
     fontSize: 13,
     color: "#6b7a93",
-    lineHeight: 19,
+    lineHeight: 20,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#dde5ee",
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 12,
     color: "#1e2a3d",
     backgroundColor: "#eef2f7",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    minHeight: 90,
+    minHeight: 96,
     textAlignVertical: "top",
   },
   inputError: {
@@ -201,35 +215,46 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     color: "#dc2626",
+    lineHeight: 18,
   },
   btn: {
     backgroundColor: "#4a6fa5",
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 2,
+    shadowColor: "#4a6fa5",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   btnDisabled: {
-    opacity: 0.5,
+    opacity: 0.45,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   btnText: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
+    letterSpacing: 0.2,
   },
+
   stepRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
   },
   stepBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: "#caddec",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
+    flexShrink: 0,
   },
   stepNumber: {
     fontSize: 12,
@@ -240,6 +265,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: "#1e2a3d",
-    lineHeight: 20,
+    lineHeight: 22,
   },
 });

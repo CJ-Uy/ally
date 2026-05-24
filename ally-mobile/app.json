@@ -7,8 +7,18 @@
     "scheme": "ally",
     "userInterfaceStyle": "light",
     "backgroundColor": "#eef2f7",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#eef2f7"
+    },
     "android": {
       "package": "com.ally.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#eef2f7"
+      },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
