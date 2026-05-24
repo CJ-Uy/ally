@@ -1,0 +1,9 @@
+{
+  "name": "app-blocker",
+  "version": "1.0.0",
+  "description": "Ally Android app blocker (foreground service + system overlay)",
+  "main": "index.ts",
+  "types": "index.ts",
+  "keywords": ["react-native", "expo", "app-blocker"],
+  "private": true
+}

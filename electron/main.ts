@@ -22,6 +22,7 @@ import { sendToAgent } from "./agent/gemini";
 import { getAiStatus } from "./agent/llm";
 import { createLockWindow, createOrbWindow } from "./windows";
 import { startPoller, stopPoller } from "./poller";
+import { startNegotiationsPoller, stopNegotiationsPoller } from "./data/negotiations-poller";
 import { registerProductivityIpc } from "./ipc/productivity";
 import { upsertSessionSync } from "./data/session-sync";
 import { bootstrapSchema } from "./data/bootstrap";
@@ -216,6 +217,7 @@ function bootstrap() {
         console.warn("[notifications] app-open checks failed:", err);
       });
       scheduleDailyChecks();
+      startNegotiationsPoller();
     })
     .catch((err) => {
       console.error("[bootstrap] schema init failed:", err);
@@ -242,6 +244,7 @@ app.whenReady().then(() => {
 
 app.on("before-quit", () => {
   stopPoller();
+  stopNegotiationsPoller();
 });
 
 ipcMain.handle("app:ping", async () => "pong");

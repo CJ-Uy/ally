@@ -64,6 +64,18 @@ const STATEMENTS = [
      started_at INTEGER,
      updated_at INTEGER NOT NULL
    )`,
+  `CREATE TABLE IF NOT EXISTS negotiations (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     source TEXT NOT NULL DEFAULT 'mobile',
+     blocked_app TEXT NOT NULL,
+     user_message TEXT NOT NULL,
+     conversation TEXT,
+     status TEXT NOT NULL DEFAULT 'pending',
+     minutes_granted INTEGER,
+     ai_reply TEXT,
+     requested_at INTEGER NOT NULL,
+     responded_at INTEGER
+   )`,
 ];
 
 // Idempotent column additions for installs that pre-date the Scope 5 schema.
@@ -106,7 +118,7 @@ export async function bootstrapSchema(): Promise<void> {
 
   // Quick sanity check.
   const result = await db.$client.execute(
-    "select name from sqlite_master where type='table' and name in ('user_profile','subjects','syllabi','tasks','events','daily_activity','session_sync')",
+    "select name from sqlite_master where type='table' and name in ('user_profile','subjects','syllabi','tasks','events','daily_activity','session_sync','negotiations')",
   );
   console.log(
     `[bootstrap] tables present: ${result.rows.map((r) => r.name).join(", ")}`,

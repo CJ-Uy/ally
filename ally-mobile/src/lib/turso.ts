@@ -1,21 +1,21 @@
 import { toHttpUrl } from "./pairing";
 import { PairingData } from "./storage";
 
-interface TursoValue {
+export interface TursoValue {
   type: string;
   value: string | null;
 }
 
-interface TursoRow {
+export interface TursoRow {
   [index: number]: TursoValue;
 }
 
-interface TursoResult {
+export interface TursoResult {
   cols: Array<{ name: string }>;
   rows: TursoRow[];
 }
 
-async function query(
+export async function query(
   pairing: PairingData,
   sql: string,
   args: TursoValue[] = [],
@@ -57,7 +57,7 @@ async function query(
   return first.response.result;
 }
 
-function col(result: TursoResult, row: TursoRow, name: string): string | null {
+export function col(result: TursoResult, row: TursoRow, name: string): string | null {
   const idx = result.cols.findIndex((c) => c.name === name);
   if (idx === -1) return null;
   return row[idx]?.value ?? null;
