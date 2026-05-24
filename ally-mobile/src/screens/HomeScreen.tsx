@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   AppState,
   Image,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -14,6 +17,8 @@ import { clearPairing, loadPairing, type PairingData } from "../lib/storage";
 import {
   fetchSessionSync,
   fetchUpcomingStudyBlocks,
+  startMobileSession,
+  stopMobileSession,
   type SessionSync,
   type StudyBlock,
 } from "../lib/turso";
@@ -21,9 +26,7 @@ import { scheduleStudyBlockNotifications } from "../lib/notifications";
 import {
   hasUsagePermission,
   hasOverlayPermission,
-  openUsagePermissionSettings,
-  openOverlayPermissionSettings,
-  startBlocking,
+  startWatching,
   stopBlocking,
   updateBlockedPackages,
 } from "../../modules/app-blocker";
@@ -33,6 +36,7 @@ import allyImage from "../../assets/ally.png";
 interface Props {
   onUnpaired: () => void;
   onOpenPicker?: () => void;
+  onNeedsOnboarding?: () => void;
 }
 
 function formatTime(ms: number): string {
@@ -60,30 +64,32 @@ function elapsedLabel(startedAt: number): string {
   return `${Math.floor(mins / 60)}h ${mins % 60}m elapsed`;
 }
 
-export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
+export default function HomeScreen({ onUnpaired, onOpenPicker, onNeedsOnboarding }: Props) {
   const [pairing, setPairing] = useState<PairingData | null>(null);
   const [session, setSession] = useState<SessionSync | null>(null);
   const [blocks, setBlocks] = useState<StudyBlock[]>([]);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usageGranted, setUsageGranted] = useState(false);
-  const [overlayGranted, setOverlayGranted] = useState(false);
+  const [permsOK, setPermsOK] = useState(false);
   const [blockedList, setBlockedList] = useState<string[]>([]);
+  const [sessionBusy, setSessionBusy] = useState(false);
+  const [showSubjectPrompt, setShowSubjectPrompt] = useState(false);
+  const [subjectInput, setSubjectInput] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const blockingRef = useRef(false);
+  const watchingRef = useRef(false);
 
   const checkPerms = useCallback(() => {
     try {
-      setUsageGranted(hasUsagePermission());
-      setOverlayGranted(hasOverlayPermission());
+      const ok = hasUsagePermission() && hasOverlayPermission();
+      setPermsOK(ok);
+      return ok;
     } catch {
-      setUsageGranted(false);
-      setOverlayGranted(false);
+      setPermsOK(false);
+      return false;
     }
   }, []);
 
-  // Re-check perms whenever app returns to foreground (after Settings visit)
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
@@ -96,30 +102,19 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
     return () => sub.remove();
   }, [checkPerms]);
 
-  // Start/stop the blocker service based on session + permissions
-  const allPermsGranted = usageGranted && overlayGranted;
+  // Start the watching service ONCE we have pairing + perms + a blocked list.
+  // The service is then self-sufficient — it polls Turso, blocks distractions
+  // when a session is active, and survives the app being closed.
   useEffect(() => {
-    const shouldBlock = session?.active === true && allPermsGranted && blockedList.length > 0;
-    if (shouldBlock && !blockingRef.current) {
-      startBlocking(blockedList);
-      blockingRef.current = true;
-    } else if (!shouldBlock && blockingRef.current) {
-      stopBlocking();
-      blockingRef.current = false;
-    } else if (shouldBlock && blockingRef.current) {
-      // Already blocking — just push the latest list
+    if (!pairing || !permsOK || blockedList.length === 0) return;
+    if (!watchingRef.current) {
+      startWatching(pairing.dbUrl, pairing.authToken, blockedList);
+      watchingRef.current = true;
+    } else {
+      // Already watching — just push the latest blocked list.
       updateBlockedPackages(blockedList);
     }
-  }, [session?.active, allPermsGranted, blockedList]);
-
-  useEffect(() => {
-    return () => {
-      if (blockingRef.current) {
-        stopBlocking();
-        blockingRef.current = false;
-      }
-    };
-  }, []);
+  }, [pairing, permsOK, blockedList]);
 
   const refresh = useCallback(async (p: PairingData, quiet = false) => {
     if (!quiet) setLoading(true);
@@ -155,10 +150,45 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
   }, [pairing, refresh]);
 
   const sessionActive = session?.active ?? false;
-  const blockerStatusLabel = !allPermsGranted ? "Setup needed"
-    : sessionActive ? "Blocking"
-    : "Ready";
-  const blockerActive = allPermsGranted && sessionActive;
+  const blockerStatusLabel = !permsOK ? "Setup needed" : sessionActive ? "Blocking" : "Watching";
+  const blockerActive = permsOK && sessionActive;
+
+  const handleStartSession = async () => {
+    if (!pairing) return;
+    setSessionBusy(true);
+    try {
+      await startMobileSession(pairing, subjectInput.trim() || null);
+      setShowSubjectPrompt(false);
+      setSubjectInput("");
+      await refresh(pairing, true);
+    } catch (err) {
+      Alert.alert("Couldn't start session", err instanceof Error ? err.message : String(err));
+    } finally {
+      setSessionBusy(false);
+    }
+  };
+
+  const handleStopSession = async () => {
+    if (!pairing) return;
+    setSessionBusy(true);
+    try {
+      await stopMobileSession(pairing);
+      await refresh(pairing, true);
+    } catch (err) {
+      Alert.alert("Couldn't stop session", err instanceof Error ? err.message : String(err));
+    } finally {
+      setSessionBusy(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (watchingRef.current) {
+      stopBlocking();
+      watchingRef.current = false;
+    }
+    await clearPairing();
+    onUnpaired();
+  };
 
   return (
     <ScrollView
@@ -192,30 +222,51 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
 
       {/* Session card */}
       <View style={[styles.card, sessionActive && styles.cardActive]}>
-        <Text style={styles.cardLabel}>Desktop Session</Text>
+        <Text style={styles.cardLabel}>Study Session</Text>
         {session == null ? (
           <View style={styles.emptyRow}>
             <Image source={allyImage} style={styles.emptyImage} resizeMode="contain" />
             <Text style={styles.muted}>Waiting for first sync…{"\n"}Pull down to refresh.</Text>
           </View>
         ) : sessionActive ? (
-          <View style={styles.sessionInfo}>
-            <Text style={styles.sessionSubject}>
-              {session.subject ?? "General study"}
-            </Text>
-            <View style={styles.sessionMeta}>
+          <>
+            <View style={styles.sessionInfo}>
+              <Text style={styles.sessionSubject}>
+                {session.subject ?? "General study"}
+              </Text>
               {session.startedAt && (
                 <Text style={styles.sessionMetaText}>
                   Started {formatTime(session.startedAt)} · {elapsedLabel(session.startedAt)}
                 </Text>
               )}
             </View>
-          </View>
+            <TouchableOpacity
+              style={styles.stopBtn}
+              onPress={() => void handleStopSession()}
+              disabled={sessionBusy}
+              activeOpacity={0.85}
+            >
+              {sessionBusy
+                ? <ActivityIndicator color="#dc2626" size="small" />
+                : <Text style={styles.stopBtnText}>End session</Text>
+              }
+            </TouchableOpacity>
+          </>
         ) : (
-          <View style={styles.idleRow}>
-            <Image source={allyImage} style={styles.idleImage} resizeMode="contain" />
-            <Text style={styles.idleText}>No session running on desktop</Text>
-          </View>
+          <>
+            <View style={styles.idleRow}>
+              <Image source={allyImage} style={styles.idleImage} resizeMode="contain" />
+              <Text style={styles.idleText}>No session running. Start one from here or your desktop.</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.startBtn}
+              onPress={() => setShowSubjectPrompt(true)}
+              disabled={sessionBusy}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.startBtnText}>Start study session</Text>
+            </TouchableOpacity>
+          </>
         )}
       </View>
 
@@ -223,39 +274,30 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
           <Text style={styles.cardLabel}>App Blocker</Text>
-          <View style={[styles.blockerBadge, blockerActive ? styles.blockerBadgeOn : styles.blockerBadgeOff]}>
-            <View style={[styles.blockerDot, blockerActive ? styles.blockerDotOn : styles.blockerDotOff]} />
-            <Text style={[styles.blockerBadgeText, blockerActive ? styles.blockerBadgeTextOn : styles.blockerBadgeTextOff]}>
+          <View style={[styles.blockerBadge, blockerActive ? styles.blockerBadgeOn : permsOK ? styles.blockerBadgeReady : styles.blockerBadgeOff]}>
+            <View style={[
+              styles.blockerDot,
+              blockerActive ? styles.blockerDotOn : permsOK ? styles.blockerDotReady : styles.blockerDotOff,
+            ]} />
+            <Text style={[
+              styles.blockerBadgeText,
+              blockerActive ? styles.blockerBadgeTextOn : permsOK ? styles.blockerBadgeTextReady : styles.blockerBadgeTextOff,
+            ]}>
               {blockerStatusLabel}
             </Text>
           </View>
         </View>
 
-        {!usageGranted && (
-          <View style={styles.permRow}>
-            <Text style={styles.permTitle}>Step 1 of 2 — Usage access</Text>
-            <Text style={styles.permDesc}>
-              Lets Ally see which app is in the foreground so it knows when to block.
+        {!permsOK ? (
+          <>
+            <Text style={styles.muted}>
+              The blocker needs Usage Access and Overlay permission to work.
             </Text>
-            <TouchableOpacity style={styles.permBtn} onPress={openUsagePermissionSettings} activeOpacity={0.8}>
-              <Text style={styles.permBtnText}>Grant Usage Access</Text>
+            <TouchableOpacity style={styles.permBtn} onPress={onNeedsOnboarding} activeOpacity={0.85}>
+              <Text style={styles.permBtnText}>Finish setup</Text>
             </TouchableOpacity>
-          </View>
-        )}
-
-        {usageGranted && !overlayGranted && (
-          <View style={styles.permRow}>
-            <Text style={styles.permTitle}>Step 2 of 2 — Draw over other apps</Text>
-            <Text style={styles.permDesc}>
-              Lets Ally show the block screen on top of distracting apps.
-            </Text>
-            <TouchableOpacity style={styles.permBtn} onPress={openOverlayPermissionSettings} activeOpacity={0.8}>
-              <Text style={styles.permBtnText}>Grant Overlay Permission</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {allPermsGranted && (
+          </>
+        ) : (
           <>
             {sessionActive ? (
               <Text style={styles.blockerActiveText}>
@@ -263,7 +305,7 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
               </Text>
             ) : (
               <Text style={styles.muted}>
-                Ready. Blocking will activate when your desktop session starts.
+                Ready. Blocking will activate when a study session starts — even if Ally is closed.
               </Text>
             )}
             <TouchableOpacity style={styles.manageBtn} onPress={onOpenPicker} activeOpacity={0.8}>
@@ -301,10 +343,7 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
               const soon = mins <= 35 && mins > 0;
               const now = mins <= 0;
               return (
-                <View
-                  key={block.id}
-                  style={[styles.blockRow, i > 0 && styles.blockRowBorder, soon && styles.blockRowSoon]}
-                >
+                <View key={block.id} style={[styles.blockRow, i > 0 && styles.blockRowBorder, soon && styles.blockRowSoon]}>
                   <View style={styles.blockTimeCol}>
                     <Text style={styles.blockDate}>{formatDate(block.startsAt)}</Text>
                     <Text style={styles.blockTime}>{formatTime(block.startsAt)}</Text>
@@ -317,11 +356,7 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
                         : `in ${Math.floor(mins / 60)}h ${mins % 60}m`}
                     </Text>
                   </View>
-                  {soon && (
-                    <View style={styles.soonBadge}>
-                      <Text style={styles.soonBadgeText}>Soon</Text>
-                    </View>
-                  )}
+                  {soon && <View style={styles.soonBadge}><Text style={styles.soonBadgeText}>Soon</Text></View>}
                 </View>
               );
             })}
@@ -335,10 +370,53 @@ export default function HomeScreen({ onUnpaired, onOpenPicker }: Props) {
             Synced {lastSynced.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </Text>
         )}
-        <TouchableOpacity onPress={() => void clearPairing().then(onUnpaired)}>
+        <TouchableOpacity onPress={() => void handleDisconnect()}>
           <Text style={styles.disconnectText}>Disconnect</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Start session modal */}
+      <Modal
+        visible={showSubjectPrompt}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSubjectPrompt(false)}
+      >
+        <View style={styles.modalRoot}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Start a study session</Text>
+            <Text style={styles.modalHint}>What are you studying? (Optional)</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={subjectInput}
+              onChangeText={setSubjectInput}
+              placeholder="e.g. Calculus, History..."
+              placeholderTextColor="#8fa3c0"
+              autoFocus
+              maxLength={80}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowSubjectPrompt(false)}
+                disabled={sessionBusy}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={() => void handleStartSession()}
+                disabled={sessionBusy}
+              >
+                {sessionBusy
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.modalConfirmText}>Start</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -380,34 +458,51 @@ const styles = StyleSheet.create({
 
   sessionInfo: { gap: 4 },
   sessionSubject: { fontSize: 20, fontWeight: "700", color: "#1e2a3d", letterSpacing: -0.3 },
-  sessionMeta: { flexDirection: "row", gap: 8 },
   sessionMetaText: { fontSize: 13, color: "#4a6fa5", fontWeight: "500" },
 
   idleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   idleImage: { width: 36, height: 36, opacity: 0.4 },
-  idleText: { fontSize: 14, color: "#6b7a93", flex: 1 },
+  idleText: { fontSize: 14, color: "#6b7a93", flex: 1, lineHeight: 20 },
+
+  startBtn: {
+    backgroundColor: "#4a6fa5",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    shadowColor: "#4a6fa5",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  startBtnText: { color: "#fff", fontSize: 15, fontWeight: "700", letterSpacing: 0.2 },
+
+  stopBtn: {
+    borderWidth: 1, borderColor: "#fecaca", backgroundColor: "#fef2f2",
+    borderRadius: 10, paddingVertical: 11, alignItems: "center",
+  },
+  stopBtnText: { color: "#b91c1c", fontSize: 14, fontWeight: "600" },
 
   muted: { fontSize: 13, color: "#6b7a93", lineHeight: 20 },
   errorText: { fontSize: 13, color: "#dc2626", lineHeight: 19 },
 
-  // App blocker
   blockerBadge: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1,
   },
   blockerBadgeOn: { backgroundColor: "#fff7ed", borderColor: "#fed7aa" },
+  blockerBadgeReady: { backgroundColor: "#dcfce7", borderColor: "#86efac" },
   blockerBadgeOff: { backgroundColor: "#f9fbfd", borderColor: "#dde5ee" },
   blockerDot: { width: 6, height: 6, borderRadius: 3 },
   blockerDotOn: { backgroundColor: "#f97316" },
+  blockerDotReady: { backgroundColor: "#16a34a" },
   blockerDotOff: { backgroundColor: "#cbd5e1" },
   blockerBadgeText: { fontSize: 11, fontWeight: "700" },
   blockerBadgeTextOn: { color: "#c2410c" },
+  blockerBadgeTextReady: { color: "#15803d" },
   blockerBadgeTextOff: { color: "#6b7a93" },
   blockerActiveText: { fontSize: 13, color: "#c2410c", fontWeight: "500", lineHeight: 19 },
 
-  permRow: { gap: 8 },
-  permTitle: { fontSize: 13, fontWeight: "700", color: "#1e2a3d" },
-  permDesc: { fontSize: 13, color: "#6b7a93", lineHeight: 20 },
   permBtn: {
     backgroundColor: "#4a6fa5", borderRadius: 10,
     paddingVertical: 10, paddingHorizontal: 16, alignItems: "center", marginTop: 4,
@@ -442,4 +537,28 @@ const styles = StyleSheet.create({
   footer: { alignItems: "center", gap: 10, marginTop: 4 },
   footerText: { fontSize: 12, color: "#6b7a93" },
   disconnectText: { fontSize: 13, color: "#dc2626" },
+
+  modalRoot: {
+    flex: 1, backgroundColor: "rgba(30, 42, 61, 0.6)",
+    alignItems: "center", justifyContent: "center", padding: 24,
+  },
+  modalCard: {
+    width: "100%", maxWidth: 420, backgroundColor: "#ffffff",
+    borderRadius: 16, padding: 24, gap: 14,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#1e2a3d" },
+  modalHint: { fontSize: 13, color: "#6b7a93", lineHeight: 19 },
+  modalInput: {
+    borderWidth: 1.5, borderColor: "#dde5ee", borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: "#1e2a3d",
+    backgroundColor: "#f9fbfd",
+  },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 8, marginTop: 4 },
+  modalCancelBtn: { paddingVertical: 10, paddingHorizontal: 16 },
+  modalCancelText: { color: "#6b7a93", fontSize: 14, fontWeight: "600" },
+  modalConfirmBtn: {
+    backgroundColor: "#4a6fa5", borderRadius: 10,
+    paddingVertical: 10, paddingHorizontal: 22, minWidth: 80, alignItems: "center",
+  },
+  modalConfirmText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 });

@@ -126,6 +126,32 @@ export async function fetchUpcomingStudyBlocks(
   }));
 }
 
+export async function startMobileSession(
+  pairing: PairingData,
+  subject: string | null,
+): Promise<void> {
+  const now = Date.now();
+  await query(
+    pairing,
+    `INSERT OR REPLACE INTO session_sync (id, active, subject, started_at, updated_at)
+     VALUES (1, 1, ?, ?, ?)`,
+    [
+      { type: subject ? "text" : "null", value: subject },
+      { type: "integer", value: String(now) },
+      { type: "integer", value: String(now) },
+    ],
+  );
+}
+
+export async function stopMobileSession(pairing: PairingData): Promise<void> {
+  await query(
+    pairing,
+    `INSERT OR REPLACE INTO session_sync (id, active, subject, started_at, updated_at)
+     VALUES (1, 0, NULL, NULL, ?)`,
+    [{ type: "integer", value: String(Date.now()) }],
+  );
+}
+
 export async function testConnection(pairing: PairingData): Promise<boolean> {
   try {
     await query(pairing, "SELECT 1");

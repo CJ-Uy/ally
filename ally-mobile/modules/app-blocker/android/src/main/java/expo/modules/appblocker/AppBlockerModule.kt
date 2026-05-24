@@ -55,10 +55,29 @@ class AppBlockerModule : Module() {
       ctx.startActivity(intent)
     }
 
-    Function("startBlocking") { packages: List<String> ->
+    Function("openBatteryOptimizationSettings") {
+      val ctx = appContext.reactContext ?: return@Function
+      val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+      }
+      try { ctx.startActivity(intent) } catch (_: Exception) {}
+    }
+
+    /**
+     * Starts the background blocker service in "watch" mode. The service will:
+     *   - poll the user's Turso `session_sync` row every 30s
+     *   - while a session is active, block any package in the supplied list
+     *   - survive being swiped from recents and persist config for reboots
+     *
+     * Call this ONCE per pairing — calling it again with new args just updates
+     * the persisted config; the service runs until `stopBlocking` is invoked.
+     */
+    Function("startWatching") { dbUrl: String, authToken: String, packages: List<String> ->
       val ctx = appContext.reactContext ?: return@Function
       val i = Intent(ctx, BlockerService::class.java).apply {
-        action = BlockerService.ACTION_START
+        action = BlockerService.ACTION_WATCH
+        putExtra(BlockerService.EXTRA_DB_URL, dbUrl)
+        putExtra(BlockerService.EXTRA_AUTH_TOKEN, authToken)
         putStringArrayListExtra(BlockerService.EXTRA_PACKAGES, ArrayList(packages))
       }
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -71,7 +90,7 @@ class AppBlockerModule : Module() {
     Function("updateBlockedPackages") { packages: List<String> ->
       val ctx = appContext.reactContext ?: return@Function
       val i = Intent(ctx, BlockerService::class.java).apply {
-        action = BlockerService.ACTION_UPDATE
+        action = BlockerService.ACTION_UPDATE_PACKAGES
         putStringArrayListExtra(BlockerService.EXTRA_PACKAGES, ArrayList(packages))
       }
       ctx.startService(i)
@@ -94,6 +113,8 @@ class AppBlockerModule : Module() {
       }
       ctx.startService(i)
     }
+
+    Function("isSessionActive") { BlockerService.sessionActive }
 
     Function("getInstalledApps") { listInstalledApps() }
   }
@@ -126,11 +147,9 @@ class AppBlockerModule : Module() {
   private fun listInstalledApps(): List<Map<String, Any>> {
     val ctx = appContext.reactContext ?: return emptyList()
     val pm = ctx.packageManager
-    val flags = PackageManager.GET_META_DATA
-    val apps = pm.getInstalledApplications(flags)
+    val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
     return apps.mapNotNull { info ->
-      // Only return launchable apps (excludes system services with no UI)
-      val launch = pm.getLaunchIntentForPackage(info.packageName) ?: return@mapNotNull null
+      pm.getLaunchIntentForPackage(info.packageName) ?: return@mapNotNull null
       val isSystem = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
       val label = try { pm.getApplicationLabel(info).toString() } catch (_: Exception) { info.packageName }
       mapOf(

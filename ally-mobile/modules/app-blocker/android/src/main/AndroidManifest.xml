@@ -1,19 +1,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           xmlns:tools="http://schemas.android.com/tools">
 
-  <!-- Read foreground app via UsageStatsManager -->
   <uses-permission
     android:name="android.permission.PACKAGE_USAGE_STATS"
     tools:ignore="ProtectedPermissions" />
 
-  <!-- Draw overlay over other apps (this is the real "blocker") -->
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-  <!-- Foreground service to keep blocking alive when app is backgrounded -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+  <uses-permission android:name="android.permission.INTERNET" />
 
-  <!-- Query installed packages on Android 11+ -->
   <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
     tools:ignore="QueryAllPackagesPermission" />
 
@@ -27,5 +24,15 @@
         android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
         android:value="App focus blocking during study sessions" />
     </service>
+
+    <receiver
+      android:name="expo.modules.appblocker.BootReceiver"
+      android:enabled="true"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>

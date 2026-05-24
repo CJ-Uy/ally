@@ -1,0 +1,37 @@
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+# Anchored to project root — don't ignore modules/*/android or modules/*/ios
+/android/
+/ios/
+
+# Metro / bundler
+.metro-health-check*
+
+# Node
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Local env
+.env
+.env.local
+.env*.local
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

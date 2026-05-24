@@ -39,15 +39,15 @@ interface AppBlockerNativeModule {
   openUsagePermissionSettings: () => void;
   hasOverlayPermission: () => boolean;
   openOverlayPermissionSettings: () => void;
-  startBlocking: (packages: string[]) => void;
+  openBatteryOptimizationSettings: () => void;
+  startWatching: (dbUrl: string, authToken: string, packages: string[]) => void;
   updateBlockedPackages: (packages: string[]) => void;
   stopBlocking: () => void;
   grantBreak: (minutes: number) => void;
+  isSessionActive: () => boolean;
   getInstalledApps: () => InstalledApp[];
 }
 
-// Try to load the native module. In Expo Go (`pnpm start`), it won't exist —
-// fall back to a no-op stub so the JS bundle still runs for UI iteration.
 let nativeModule: AppBlockerNativeModule | null = null;
 try {
   nativeModule = requireNativeModule<AppBlockerNativeModule>("AppBlocker");
@@ -81,8 +81,21 @@ export function openOverlayPermissionSettings(): void {
   nativeModule?.openOverlayPermissionSettings();
 }
 
-export function startBlocking(packages: string[]): void {
-  nativeModule?.startBlocking(packages);
+export function openBatteryOptimizationSettings(): void {
+  nativeModule?.openBatteryOptimizationSettings();
+}
+
+/**
+ * Hands the foreground service everything it needs to run independently:
+ * the user's Turso credentials (for session polling) and the package list to
+ * block. Safe to call repeatedly — re-calling just updates the stored config.
+ */
+export function startWatching(
+  dbUrl: string,
+  authToken: string,
+  packages: string[],
+): void {
+  nativeModule?.startWatching(dbUrl, authToken, packages);
 }
 
 export function updateBlockedPackages(packages: string[]): void {
@@ -95,6 +108,10 @@ export function stopBlocking(): void {
 
 export function grantBreak(minutes: number): void {
   nativeModule?.grantBreak(minutes);
+}
+
+export function isSessionActive(): boolean {
+  return nativeModule?.isSessionActive() ?? false;
 }
 
 export function getInstalledApps(): InstalledApp[] {
