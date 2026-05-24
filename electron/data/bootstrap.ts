@@ -57,6 +57,13 @@ const STATEMENTS = [
      sessions_completed INTEGER NOT NULL DEFAULT 0,
      breaks_used INTEGER NOT NULL DEFAULT 0
    )`,
+  `CREATE TABLE IF NOT EXISTS session_sync (
+     id INTEGER PRIMARY KEY,
+     active INTEGER NOT NULL DEFAULT 0,
+     subject TEXT,
+     started_at INTEGER,
+     updated_at INTEGER NOT NULL
+   )`,
 ];
 
 // Idempotent column additions for installs that pre-date the Scope 5 schema.
@@ -99,7 +106,7 @@ export async function bootstrapSchema(): Promise<void> {
 
   // Quick sanity check.
   const result = await db.$client.execute(
-    "select name from sqlite_master where type='table' and name in ('user_profile','subjects','syllabi','tasks','events','daily_activity')",
+    "select name from sqlite_master where type='table' and name in ('user_profile','subjects','syllabi','tasks','events','daily_activity','session_sync')",
   );
   console.log(
     `[bootstrap] tables present: ${result.rows.map((r) => r.name).join(", ")}`,

@@ -23,6 +23,7 @@ import { getAiStatus } from "./agent/llm";
 import { createLockWindow, createOrbWindow } from "./windows";
 import { startPoller, stopPoller } from "./poller";
 import { registerProductivityIpc } from "./ipc/productivity";
+import { upsertSessionSync } from "./data/session-sync";
 import { bootstrapSchema } from "./data/bootstrap";
 import { recordBreakUsed, recordCompletedSession } from "./data/activity";
 import {
@@ -272,6 +273,7 @@ ipcMain.handle("session:start", async (_event, payload?: unknown) => {
         ? String((payload as { subject: unknown }).subject ?? "")
         : "";
     startSession(subject);
+    void upsertSessionSync(true, subject || null, Date.now());
     broadcastState();
   }
 });
@@ -280,6 +282,7 @@ ipcMain.handle("session:stop", async () => {
   if (isSessionActive()) {
     stopSession();
     closeLockWindow();
+    void upsertSessionSync(false, null, null);
     try {
       await recordCompletedSession();
     } catch (err) {
@@ -361,6 +364,13 @@ ipcMain.handle("db:health", async () => {
 });
 
 ipcMain.handle("ai:status", async () => getAiStatus());
+
+ipcMain.handle("mobile:pairingCode", async () => {
+  const url = process.env.TURSO_DATABASE_URL ?? "";
+  const token = process.env.TURSO_AUTH_TOKEN ?? "";
+  if (!url || !token) return null;
+  return Buffer.from(`${url}\n${token}`).toString("base64");
+});
 
 ipcMain.handle(
   "r2:list",

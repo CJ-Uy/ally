@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Ally",
+    "slug": "ally-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ally",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#eef2f7",
+    "android": {
+      "package": "com.ally.mobile",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "color": "#4a6fa5",
+          "defaultChannel": "ally"
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "14074106-2219-4b68-bd4d-f7b2599a3dc3"
+      }
+    }
+  }
+}

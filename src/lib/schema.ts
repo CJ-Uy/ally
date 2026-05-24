@@ -64,6 +64,14 @@ export const tasks = sqliteTable("tasks", {
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 });
 
+export const sessionSync = sqliteTable("session_sync", {
+  id: integer("id").primaryKey(),
+  active: integer("active", { mode: "boolean" }).notNull().default(false),
+  subject: text("subject"),
+  startedAt: integer("started_at", { mode: "timestamp_ms" }),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
 export const events = sqliteTable("events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   subjectId: integer("subject_id")

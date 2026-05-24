@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { refreshAll, useActivityToday, useProfile, useSubjects } from "../data/store";
 
-type SettingsTab = "profile" | "notifications" | "subjects" | "ai" | "data";
+type SettingsTab = "profile" | "notifications" | "subjects" | "ai" | "data" | "mobile";
 
 const NOTIFICATION_ITEMS: { key: NotificationToggleKey; label: string; description: string }[] = [
   {
@@ -414,6 +414,92 @@ function AiAgentsTab() {
   );
 }
 
+function MobileTab() {
+  const [code, setCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const load = async () => {
+    if (!window.api?.mobilePairingCode) return;
+    setLoading(true);
+    try {
+      const result = await window.api.mobilePairingCode();
+      setCode(result);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = () => {
+    if (!code) return;
+    void navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="settings-stack">
+      <div className="settings-card">
+        <div className="settings-card__label">Pair Ally Mobile</div>
+        <div className="settings-card__hint" style={{ marginBottom: 12 }}>
+          Open the Ally mobile app, tap <strong>Pair with Desktop</strong>, and paste this code.
+          The code gives the app read access to your Turso database — treat it like a password.
+        </div>
+        {!code ? (
+          <button
+            type="button"
+            className="btn btn--sm"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            {loading ? "Generating…" : "Show pairing code"}
+          </button>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <textarea
+              readOnly
+              value={code}
+              rows={5}
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                padding: "10px 12px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "var(--bg)",
+                color: "var(--ink)",
+                resize: "none",
+                wordBreak: "break-all",
+                lineHeight: 1.5,
+              }}
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="btn btn--primary btn--sm" onClick={copy}>
+                {copied ? "Copied!" : "Copy code"}
+              </button>
+              <button type="button" className="btn btn--sm" onClick={() => setCode(null)}>
+                Hide
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="settings-card">
+        <div className="settings-card__label">How it works</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "var(--ink-soft)", fontSize: 13 }}>
+          <div>1. Install the Ally mobile APK on your Android device.</div>
+          <div>2. Tap <strong style={{ color: "var(--ink)" }}>Pair with Desktop</strong> and paste the code above.</div>
+          <div>3. The app will notify you 30 min before scheduled study blocks and when a session starts on this computer.</div>
+          <div>4. Use the <strong style={{ color: "var(--ink)" }}>Refresh</strong> button in the app to pull the latest data any time.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DataTab() {
   const [activity] = useActivityToday();
   const [resetting, setResetting] = useState(false);
@@ -481,6 +567,7 @@ export function SettingsPage() {
     { id: "subjects", label: "Subjects" },
     { id: "ai", label: "AI Agents" },
     { id: "data", label: "Activity" },
+    { id: "mobile", label: "Mobile" },
   ];
 
   return (
@@ -510,6 +597,7 @@ export function SettingsPage() {
       {tab === "subjects" && <SubjectsTab />}
       {tab === "ai" && <AiAgentsTab />}
       {tab === "data" && <DataTab />}
+      {tab === "mobile" && <MobileTab />}
     </div>
   );
 }
