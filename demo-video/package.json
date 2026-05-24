@@ -1,0 +1,33 @@
+{
+  "name": "academic-ally-demo-video",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "capture:app": "node scripts/capture-app-screens.mjs",
+    "check:agents": "node scripts/check-agent-animation-data.mjs",
+    "check:evaluation": "node scripts/check-evaluation-coverage-data.mjs",
+    "check:motion": "node scripts/check-motion-scenes.mjs",
+    "preview": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "render:agents": "remotion render src/index.ts AcademicAllyAgentArchitecture out/academic-ally-agent-architecture.mp4",
+    "render:evaluation": "remotion render src/index.ts AcademicAllyEvaluationCoverage out/academic-ally-evaluation-coverage.mp4",
+    "render:full": "remotion render src/index.ts AcademicAllyFullDemo out/academic-ally-full-demo.mp4",
+    "render:clips": "node scripts/render-all.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.374",
+    "@remotion/media-utils": "^4.0.374",
+    "remotion": "^4.0.374",
+    "typescript": "^5.6.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "@types/react": "^18.2.64",
+    "@types/react-dom": "^18.2.21",
+    "playwright": "^1.52.0",
+    "vite": "^5.1.6"
+  }
+}
