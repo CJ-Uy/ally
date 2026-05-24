@@ -13,8 +13,15 @@ import {
 } from "@google/generative-ai";
 import { modelFor, type AgentSlot } from "./models";
 
-const OLLAMA_TIMEOUT_MS = 120_000;
+// Cloudflare tunnels return HTTP 524 when the upstream takes >~100 s, which
+// looks like a confusing 5xx instead of a clean timeout. Stay under that so
+// the local abort fires first and we get a fast, well-typed error.
+const OLLAMA_TIMEOUT_MS = 95_000;
 const PING_TIMEOUT_MS = 4_000;
+
+function ollamaOnly(): boolean {
+  return process.env.LLM_PROVIDER?.trim().toLowerCase() === "ollama";
+}
 
 export type Provider = "ollama" | "gemini";
 
@@ -42,7 +49,9 @@ function ollamaBase(): string | null {
 }
 
 function ollamaModel(): string {
-  return process.env.OLLAMA_MODEL?.trim() || "qwen3.5:9b";
+  // qwen2.5:7b is the default because qwen3.5's "thinking" CoT regularly
+  // overruns the Cloudflare 100 s budget on JSON/tool prompts.
+  return process.env.OLLAMA_MODEL?.trim() || "qwen2.5:7b";
 }
 
 // ── health ──────────────────────────────────────────────────────────────
@@ -224,16 +233,34 @@ export interface GenerateOpts {
 }
 
 async function pdfToText(filePath: string): Promise<string> {
-  const mod = (await import("pdf-parse")) as unknown as
-    | { default: (b: Buffer) => Promise<{ text: string }> }
-    | ((b: Buffer) => Promise<{ text: string }>);
-  const parse =
-    typeof mod === "function"
-      ? mod
-      : (mod as { default: (b: Buffer) => Promise<{ text: string }> }).default;
+  // pdf-parse@2.x is ESM-only and exposes a `PDFParse` class (no default
+  // function export). v1's `parse(buffer)` form is gone — calling it bundled
+  // produced "parse2 is not a function" at runtime.
+  const mod = (await import("pdf-parse")) as { PDFParse?: unknown } & {
+    default?: { PDFParse?: unknown };
+  };
+  const PDFParseCtor = (mod.PDFParse ?? mod.default?.PDFParse) as
+    | (new (opts: { data: Uint8Array }) => {
+        getText: () => Promise<{ text: string }>;
+        destroy: () => Promise<void>;
+      })
+    | undefined;
+  if (!PDFParseCtor) {
+    throw new Error("pdf-parse: PDFParse class not found on module exports");
+  }
+
   const abs = path.isAbsolute(filePath) ? filePath : path.resolve(filePath);
-  const data = await parse(readFileSync(abs));
-  return data.text;
+  const buf = readFileSync(abs);
+  // PDF.js takes ownership of the buffer it receives, so hand it a fresh copy
+  // to avoid corrupting Node's underlying Buffer pool.
+  const data = new Uint8Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  const parser = new PDFParseCtor({ data });
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy().catch(() => {});
+  }
 }
 
 async function ollamaGenerate(
@@ -252,6 +279,9 @@ async function ollamaGenerate(
       body: JSON.stringify({
         model: ollamaModel(),
         stream: false,
+        // think:false suppresses qwen3.x's verbose chain-of-thought so the
+        // model returns its final answer directly. No-op for qwen2.5 etc.
+        think: false,
         ...(json ? { format: "json" } : {}),
         messages: [
           { role: "system", content: system },
@@ -310,6 +340,9 @@ export async function generate(
     console.log(`[llm] generate via ollama (slot=${opts.slot})`);
     return { text, provider: "ollama" };
   } catch (err) {
+    if (ollamaOnly()) {
+      throw err;
+    }
     console.warn(
       `[llm] ollama generate failed, falling back to gemini:`,
       err instanceof Error ? err.message : err,
@@ -346,7 +379,12 @@ async function ollamaChat(opts: ChatOpts): Promise<string> {
     const res = await fetch(`${base}/api/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: ollamaModel(), stream: false, messages }),
+      body: JSON.stringify({
+        model: ollamaModel(),
+        stream: false,
+        think: false,
+        messages,
+      }),
       signal: ctl.signal,
     });
     if (!res.ok) {
@@ -385,6 +423,9 @@ export async function chat(
     console.log(`[llm] chat via ollama (slot=${opts.slot})`);
     return { text, provider: "ollama" };
   } catch (err) {
+    if (ollamaOnly()) {
+      throw err;
+    }
     console.warn(
       `[llm] ollama chat failed, falling back to gemini:`,
       err instanceof Error ? err.message : err,
@@ -437,6 +478,7 @@ async function ollamaChatWithTools(opts: ChatWithToolsOpts): Promise<string> {
         body: JSON.stringify({
           model: ollamaModel(),
           stream: false,
+          think: false,
           messages,
           tools,
         }),
@@ -585,6 +627,9 @@ export async function chatWithTools(
     console.log(`[llm] chatWithTools via ollama (slot=${opts.slot})`);
     return { text, provider: "ollama" };
   } catch (err) {
+    if (ollamaOnly()) {
+      throw err;
+    }
     console.warn(
       `[llm] ollama chatWithTools failed, falling back to gemini:`,
       err instanceof Error ? err.message : err,

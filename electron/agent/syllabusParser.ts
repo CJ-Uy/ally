@@ -120,13 +120,89 @@ export async function parseSyllabusPdf(filePath: string): Promise<ParsedSyllabus
   return normalized;
 }
 
-function normalizeParsed(p: Partial<ParsedSyllabus>): ParsedSyllabus {
+const DEADLINE_TYPES = ["assignment", "project", "reading", "quiz"] as const;
+type DeadlineType = (typeof DEADLINE_TYPES)[number];
+const DIFFICULTIES = ["light", "moderate", "heavy", "intense"] as const;
+type Difficulty = (typeof DIFFICULTIES)[number];
+
+function toStringOrNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const trimmed = v.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function toNumberOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    if (trimmed.length === 0) return null;
+    const n = Number(trimmed);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+function normalizeDeadline(raw: unknown): ParsedDeadline | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const title = toStringOrNull(r.title);
+  const dueDate = toStringOrNull(r.dueDate);
+  if (!title || !dueDate) return null;
+  const rawType = toStringOrNull(r.type)?.toLowerCase() ?? "assignment";
+  const type: DeadlineType = (DEADLINE_TYPES as readonly string[]).includes(rawType)
+    ? (rawType as DeadlineType)
+    : "assignment";
   return {
-    courseName: p.courseName ?? null,
-    difficulty: (p.difficulty ?? "moderate") as ParsedSyllabus["difficulty"],
-    gradingBreakdown: Array.isArray(p.gradingBreakdown) ? p.gradingBreakdown : [],
-    topics: Array.isArray(p.topics) ? p.topics : [],
-    deadlines: Array.isArray(p.deadlines) ? p.deadlines : [],
-    exams: Array.isArray(p.exams) ? p.exams : [],
+    title,
+    dueDate,
+    dueTime: toStringOrNull(r.dueTime),
+    type,
+    estimatedMinutes: toNumberOrNull(r.estimatedMinutes),
+  };
+}
+
+function normalizeExam(raw: unknown): ParsedExam | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const title = toStringOrNull(r.title);
+  const date = toStringOrNull(r.date);
+  if (!title || !date) return null;
+  return {
+    title,
+    date,
+    time: toStringOrNull(r.time),
+    weightPercent: toNumberOrNull(r.weightPercent),
+  };
+}
+
+function normalizeGrading(raw: unknown): ParsedGradingItem | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const component = toStringOrNull(r.component);
+  const weightPercent = toNumberOrNull(r.weightPercent);
+  if (!component || weightPercent === null) return null;
+  return { component, weightPercent };
+}
+
+function normalizeParsed(p: Partial<ParsedSyllabus>): ParsedSyllabus {
+  const rawDifficulty = typeof p.difficulty === "string" ? p.difficulty.toLowerCase() : "";
+  const difficulty: Difficulty = (DIFFICULTIES as readonly string[]).includes(rawDifficulty)
+    ? (rawDifficulty as Difficulty)
+    : "moderate";
+  return {
+    courseName: toStringOrNull(p.courseName),
+    difficulty,
+    gradingBreakdown: Array.isArray(p.gradingBreakdown)
+      ? p.gradingBreakdown.map(normalizeGrading).filter((x): x is ParsedGradingItem => x !== null)
+      : [],
+    topics: Array.isArray(p.topics)
+      ? p.topics.filter((t): t is string => typeof t === "string" && t.trim().length > 0)
+      : [],
+    deadlines: Array.isArray(p.deadlines)
+      ? p.deadlines.map(normalizeDeadline).filter((x): x is ParsedDeadline => x !== null)
+      : [],
+    exams: Array.isArray(p.exams)
+      ? p.exams.map(normalizeExam).filter((x): x is ParsedExam => x !== null)
+      : [],
   };
 }
