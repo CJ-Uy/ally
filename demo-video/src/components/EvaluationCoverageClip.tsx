@@ -313,9 +313,9 @@ function CategoryCard({
       style={{
         position: "absolute",
         left: 98,
-        top: 188 + index * 146,
+        top: 218 + index * 136,
         width: 560,
-        minHeight: 116,
+        minHeight: 108,
         padding: "20px 22px",
         borderRadius: 18,
         background: palette.panel,
@@ -387,9 +387,9 @@ function FeatureCluster({
       style={{
         position: "absolute",
         left: 1232,
-        top: 178 + index * 148,
+        top: 210 + index * 138,
         width: 560,
-        minHeight: 118,
+        minHeight: 108,
         padding: "18px 20px",
         borderRadius: 18,
         background: "rgba(249,251,253,0.9)",
@@ -443,9 +443,9 @@ function CoverageConnectors({ frame }: { frame: number }) {
       {categories.map((category, index) => {
         const progress = fade(frame, 430 + index * 24, 490 + index * 24);
         const x1 = 658;
-        const y1 = 244 + index * 146;
+        const y1 = 272 + index * 136;
         const x2 = 1232;
-        const y2 = 238 + index * 148;
+        const y2 = 264 + index * 138;
         const mid = x1 + (x2 - x1) * clamp(progress, 0, 1);
         return (
           <g key={category.name} opacity={fade(frame, 388, 430)}>
@@ -471,13 +471,13 @@ function CoverageMapStage({ frame, fps }: { frame: number; fps: number }) {
       <div style={{ position: "absolute", left: 96, top: 72 }}>
         <BrandMark compact />
       </div>
-      <div style={{ position: "absolute", left: 500, top: 82, width: 920, textAlign: "center" }}>
+      <div style={{ position: "absolute", left: 560, top: 62, width: 800, textAlign: "center" }}>
         <Sticker color={palette.butter}>Coverage to app behavior</Sticker>
         <h2
           style={{
             margin: "18px 0 0",
             fontFamily: "'Bricolage Grotesque', sans-serif",
-            fontSize: 58,
+            fontSize: 46,
             fontWeight: 800,
             lineHeight: 1.04,
           }}
