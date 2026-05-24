@@ -152,7 +152,7 @@ function Sticker({
   color = palette.sky,
   ink = palette.ink,
 }: {
-  children: string;
+  children: React.ReactNode;
   color?: string;
   ink?: string;
 }) {
@@ -472,7 +472,7 @@ function CoverageMapStage({ frame, fps }: { frame: number; fps: number }) {
         <BrandMark compact />
       </div>
       <div style={{ position: "absolute", left: 500, top: 82, width: 920, textAlign: "center" }}>
-        <Sticker color={palette.butter}>Coverage -> app behavior</Sticker>
+        <Sticker color={palette.butter}>Coverage to app behavior</Sticker>
         <h2
           style={{
             margin: "18px 0 0",
@@ -562,7 +562,7 @@ function PromptFlowCard({
           fontWeight: 800,
         }}
       >
-        ->
+        {"->"}
       </div>
       <div
         style={{
