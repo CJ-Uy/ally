@@ -114,7 +114,6 @@ function createWindow() {
     minHeight: 640,
     backgroundColor: "#f5f7fb",
     show: false,
-    fullscreen: true,
     icon: path.join(process.env.VITE_PUBLIC, "ally.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -142,6 +141,7 @@ function createWindow() {
   });
 
   win.once("ready-to-show", () => {
+    win?.maximize();
     win?.show();
     win?.focus();
   });
