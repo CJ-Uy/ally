@@ -13,14 +13,113 @@ import {
 } from "@google/generative-ai";
 import { modelFor, type AgentSlot } from "./models";
 
-// Cloudflare tunnels return HTTP 524 when the upstream takes >~100 s, which
-// looks like a confusing 5xx instead of a clean timeout. Stay under that so
-// the local abort fires first and we get a fast, well-typed error.
-const OLLAMA_TIMEOUT_MS = 95_000;
+// Overall budget for a single Ollama call. We stream every request, so
+// Cloudflare's ~100 s idle ceiling (HTTP 524) is sidestepped as long as the
+// model keeps emitting tokens — this can safely be minutes.
+const OLLAMA_TIMEOUT_MS = 300_000;
+// If the stream goes silent for this long mid-response, abort. Catches a
+// stalled tunnel without forcing the whole budget to elapse.
+const OLLAMA_IDLE_TIMEOUT_MS = 60_000;
 const PING_TIMEOUT_MS = 4_000;
 
 function ollamaOnly(): boolean {
   return process.env.LLM_PROVIDER?.trim().toLowerCase() === "ollama";
+}
+
+interface OllamaStreamChunk {
+  message?: {
+    content?: string;
+    tool_calls?: OllamaToolCall[];
+  };
+  done?: boolean;
+}
+
+interface OllamaStreamResult {
+  content: string;
+  toolCalls: OllamaToolCall[];
+}
+
+interface OllamaToolCall {
+  function?: { name?: string; arguments?: string | Record<string, unknown> };
+}
+
+// Streams a /api/chat response, accumulating message.content across chunks
+// and capturing any tool_calls seen. Resets the idle abort on each chunk so
+// long generations stay alive as long as bytes keep flowing.
+async function streamOllamaChat(
+  url: string,
+  body: Record<string, unknown>,
+): Promise<OllamaStreamResult> {
+  const overall = new AbortController();
+  const overallTimer = setTimeout(() => overall.abort(), OLLAMA_TIMEOUT_MS);
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  const resetIdle = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => overall.abort(), OLLAMA_IDLE_TIMEOUT_MS);
+  };
+  resetIdle();
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, stream: true }),
+      signal: overall.signal,
+    });
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      throw new Error(`Ollama HTTP ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+    if (!res.body) throw new Error("Ollama returned no response body");
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let content = "";
+    const toolCalls: OllamaToolCall[] = [];
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      resetIdle();
+      buffer += decoder.decode(value, { stream: true });
+
+      let newlineIdx: number;
+      while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, newlineIdx).trim();
+        buffer = buffer.slice(newlineIdx + 1);
+        if (!line) continue;
+        let chunk: OllamaStreamChunk;
+        try {
+          chunk = JSON.parse(line) as OllamaStreamChunk;
+        } catch {
+          continue;
+        }
+        if (chunk.message?.content) content += chunk.message.content;
+        if (chunk.message?.tool_calls?.length) {
+          toolCalls.push(...chunk.message.tool_calls);
+        }
+      }
+    }
+
+    const tail = buffer.trim();
+    if (tail) {
+      try {
+        const chunk = JSON.parse(tail) as OllamaStreamChunk;
+        if (chunk.message?.content) content += chunk.message.content;
+        if (chunk.message?.tool_calls?.length) {
+          toolCalls.push(...chunk.message.tool_calls);
+        }
+      } catch {
+        /* ignore truncated tail */
+      }
+    }
+
+    return { content, toolCalls };
+  } finally {
+    clearTimeout(overallTimer);
+    if (idleTimer) clearTimeout(idleTimer);
+  }
 }
 
 export type Provider = "ollama" | "gemini";
@@ -270,37 +369,19 @@ async function ollamaGenerate(
 ): Promise<string> {
   const base = ollamaBase();
   if (!base) throw new Error("OLLAMA_URL not set");
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), OLLAMA_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${base}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ollamaModel(),
-        stream: false,
-        // think:false suppresses qwen3.x's verbose chain-of-thought so the
-        // model returns its final answer directly. No-op for qwen2.5 etc.
-        think: false,
-        ...(json ? { format: "json" } : {}),
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-      }),
-      signal: ctl.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Ollama HTTP ${res.status}: ${body.slice(0, 200)}`);
-    }
-    const data = (await res.json()) as { message?: { content?: string } };
-    const text = data.message?.content ?? "";
-    if (!text.trim()) throw new Error("Ollama returned empty content");
-    return text;
-  } finally {
-    clearTimeout(timer);
-  }
+  const { content } = await streamOllamaChat(`${base}/api/chat`, {
+    model: ollamaModel(),
+    // think:false suppresses qwen3.x's verbose chain-of-thought so the model
+    // returns its final answer directly. No-op for qwen2.5 etc.
+    think: false,
+    ...(json ? { format: "json" } : {}),
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: prompt },
+    ],
+  });
+  if (!content.trim()) throw new Error("Ollama returned empty content");
+  return content;
 }
 
 async function geminiGenerate(opts: GenerateOpts): Promise<string> {
@@ -373,31 +454,13 @@ async function ollamaChat(opts: ChatOpts): Promise<string> {
     })),
     { role: "user", content: opts.message },
   ];
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), OLLAMA_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${base}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ollamaModel(),
-        stream: false,
-        think: false,
-        messages,
-      }),
-      signal: ctl.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Ollama HTTP ${res.status}: ${body.slice(0, 200)}`);
-    }
-    const data = (await res.json()) as { message?: { content?: string } };
-    const text = data.message?.content ?? "";
-    if (!text.trim()) throw new Error("Ollama returned empty content");
-    return text;
-  } finally {
-    clearTimeout(timer);
-  }
+  const { content } = await streamOllamaChat(`${base}/api/chat`, {
+    model: ollamaModel(),
+    think: false,
+    messages,
+  });
+  if (!content.trim()) throw new Error("Ollama returned empty content");
+  return content;
 }
 
 async function geminiChat(opts: ChatOpts): Promise<string> {
@@ -448,10 +511,6 @@ export interface ChatWithToolsOpts {
   maxIterations: number;
 }
 
-interface OllamaToolCall {
-  function?: { name?: string; arguments?: string | Record<string, unknown> };
-}
-
 async function ollamaChatWithTools(opts: ChatWithToolsOpts): Promise<string> {
   const base = ollamaBase();
   if (!base) throw new Error("OLLAMA_URL not set");
@@ -466,37 +525,18 @@ async function ollamaChatWithTools(opts: ChatWithToolsOpts): Promise<string> {
   ];
 
   for (let i = 0; i <= opts.maxIterations; i++) {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), OLLAMA_TIMEOUT_MS);
-    let data: {
-      message?: { content?: string; tool_calls?: OllamaToolCall[] };
-    };
-    try {
-      const res = await fetch(`${base}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: ollamaModel(),
-          stream: false,
-          think: false,
-          messages,
-          tools,
-        }),
-        signal: ctl.signal,
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`Ollama HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      data = (await res.json()) as typeof data;
-    } finally {
-      clearTimeout(timer);
-    }
+    const { content: msgContent, toolCalls: calls } = await streamOllamaChat(
+      `${base}/api/chat`,
+      {
+        model: ollamaModel(),
+        think: false,
+        messages,
+        tools,
+      },
+    );
 
-    const msg = data.message ?? {};
-    const calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
     if (calls.length === 0) {
-      const text = (msg.content ?? "").toString().trim();
+      const text = msgContent.trim();
       if (!text) {
         throw new Error("Ollama returned empty content with no tool calls");
       }
@@ -510,7 +550,7 @@ async function ollamaChatWithTools(opts: ChatWithToolsOpts): Promise<string> {
     );
     messages.push({
       role: "assistant",
-      content: msg.content ?? "",
+      content: msgContent,
       tool_calls: calls,
     });
     for (const c of calls) {
