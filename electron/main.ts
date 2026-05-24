@@ -1,5 +1,14 @@
 import "dotenv/config";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
+
+// Stop Chromium from promoting lock-window layers onto DirectComposition
+// overlay surfaces — those surfaces are invisible to most Windows screen
+// recorders (Snipping Tool, Game Bar, OBS Display Capture), which makes the
+// chat area look frozen in demo recordings.
+app.commandLine.appendSwitch(
+  "disable-features",
+  "DirectCompositionVideoSwapChain,UseWindowsGraphicsCapture",
+);
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { db } from "./db";
