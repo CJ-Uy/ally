@@ -1,4 +1,4 @@
-import { callGeminiJson } from "../geminiClient.js";
+import { callLlmJson } from "../llmClient.js";
 
 export const ORCHESTRATOR_AGENT_PROMPT = `You are Academic Ally, the parent orchestrator for a student academic planning app. Your job is to route the student through a simulated multi-agent workflow.
 
@@ -104,7 +104,7 @@ export const getNextRecommendedStep = (state) => {
 
 export const runOrchestrator = async ({ message, state }) => {
   const fallback = getNextRecommendedStep(state);
-  return callGeminiJson({
+  return callLlmJson({
     systemPrompt: ORCHESTRATOR_AGENT_PROMPT,
     input: { message, state },
     fallback

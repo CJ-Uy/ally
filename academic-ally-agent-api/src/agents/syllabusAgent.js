@@ -1,4 +1,4 @@
-import { callGeminiJson } from "../geminiClient.js";
+import { callLlmJson } from "../llmClient.js";
 import { createMockExtraction } from "../mock/mockResponses.js";
 
 export const SYLLABUS_AGENT_PROMPT = `You are the Syllabus & Course Intelligence Agent for Academic Ally. Process pasted or uploaded syllabus text. Detect course names, class details, grading systems, deadlines, exams, projects, quizzes, readings, policies, and major requirements.
@@ -45,7 +45,7 @@ Return JSON only:
 }`;
 
 export const runSyllabusExtraction = async (input) =>
-  callGeminiJson({
+  callLlmJson({
     systemPrompt: SYLLABUS_AGENT_PROMPT,
     input,
     fallback: createMockExtraction()

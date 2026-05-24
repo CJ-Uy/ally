@@ -6,6 +6,7 @@
   "description": "Local Academic Ally agent backend API for the Electron demo app.",
   "scripts": {
     "dev": "nodemon --legacy-watch --watch src src/server.js",
+    "test": "node --test",
     "start": "node src/server.js"
   },
   "dependencies": {

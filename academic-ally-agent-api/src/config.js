@@ -23,6 +23,8 @@ const parseOrigins = (value) => {
 
 export const config = {
   port: Number(process.env.PORT || 3001),
+  ollamaUrl: process.env.OLLAMA_URL || "",
+  ollamaModel: process.env.OLLAMA_MODEL || "qwen3.5:9b",
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
   demoMode: parseBoolean(process.env.DEMO_MODE, true),

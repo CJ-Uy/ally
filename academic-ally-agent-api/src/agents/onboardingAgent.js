@@ -1,4 +1,4 @@
-import { callGeminiJson } from "../geminiClient.js";
+import { callLlmJson } from "../llmClient.js";
 import { DEFAULT_STUDENT_ID } from "../config.js";
 
 export const ONBOARDING_AGENT_PROMPT = `You are the Student Profile & Onboarding Agent for Academic Ally. Collect and summarize the student's education level, weekly study hours, available study days and times, study preferences, academic goals, and notification preferences.
@@ -39,7 +39,7 @@ export const runOnboarding = async (input) => {
       "Student profile saved. You can now upload or paste your syllabi."
   };
 
-  return callGeminiJson({
+  return callLlmJson({
     systemPrompt: ONBOARDING_AGENT_PROMPT,
     input,
     fallback

@@ -1,4 +1,4 @@
-import { callGeminiJson } from "../geminiClient.js";
+import { callLlmJson } from "../llmClient.js";
 import { createMockDiagnostic } from "../mock/mockResponses.js";
 
 export const DIAGNOSTIC_AGENT_PROMPT = `You are the Learner Diagnostic Agent for Academic Ally. Create simple familiarity questions based on the extracted course topics. Do not create a hard exam unless the student asks for one.
@@ -27,7 +27,7 @@ Return JSON only:
 }`;
 
 export const runDiagnostic = async (input) =>
-  callGeminiJson({
+  callLlmJson({
     systemPrompt: DIAGNOSTIC_AGENT_PROMPT,
     input,
     fallback: createMockDiagnostic()

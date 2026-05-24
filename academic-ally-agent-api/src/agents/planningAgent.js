@@ -1,4 +1,4 @@
-import { callGeminiJson } from "../geminiClient.js";
+import { callLlmJson } from "../llmClient.js";
 import { createMockPlanning } from "../mock/mockResponses.js";
 
 export const PLANNING_AGENT_PROMPT = `You are the Workload Planning Agent for Academic Ally. Rank academic tasks and generate a realistic study plan.
@@ -36,7 +36,7 @@ Return JSON only:
 }`;
 
 export const runPlanning = async (input) =>
-  callGeminiJson({
+  callLlmJson({
     systemPrompt: PLANNING_AGENT_PROMPT,
     input,
     fallback: createMockPlanning()

@@ -1,4 +1,4 @@
-import { callGeminiJson } from "../geminiClient.js";
+import { callLlmJson } from "../llmClient.js";
 import {
   createMockBreakDecision,
   createMockExecution,
@@ -45,14 +45,14 @@ Return JSON only:
 }`;
 
 export const runExecution = async (input) =>
-  callGeminiJson({
+  callLlmJson({
     systemPrompt: EXECUTION_AGENT_PROMPT,
     input,
     fallback: createMockExecution()
   });
 
 export const runFocusSession = async (input) =>
-  callGeminiJson({
+  callLlmJson({
     systemPrompt: EXECUTION_AGENT_PROMPT,
     input: {
       ...input,
@@ -65,7 +65,7 @@ export const runFocusSession = async (input) =>
   });
 
 export const runBreakRequest = async (input) =>
-  callGeminiJson({
+  callLlmJson({
     systemPrompt: EXECUTION_AGENT_PROMPT,
     input: {
       ...input,

@@ -2,7 +2,7 @@
 
 Local backend API for the Academic Ally Electron demo app. It simulates a multi-agent academic planning assistant that turns student profile details and syllabus text into confirmed tasks, diagnostic weak-topic analysis, weekly study blocks, to-do lists, calendar events, reminders, focus-session policies, and humane break decisions.
 
-The Electron app calls this backend on `http://localhost:3001`. Gemini API credentials stay server-side in this backend only.
+The Electron app calls this backend on `http://localhost:3001`. AI calls try Ollama first and fall back to Gemini when Ollama is unavailable. Gemini API credentials stay server-side in this backend only.
 
 ## Setup
 
@@ -27,15 +27,17 @@ Available variables:
 
 ```env
 PORT=3001
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=qwen3.5:9b
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash
 DEMO_MODE=true
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-When `DEMO_MODE=true`, the API does not call Gemini and returns deterministic mock data. This is the safest setting for video demos.
+When `DEMO_MODE=true`, the API does not call Ollama or Gemini and returns deterministic mock data. This is the safest setting for video demos.
 
-When `DEMO_MODE=false`, set `GEMINI_API_KEY` in the backend `.env`. Do not put this key in Electron, React, renderer, preload, or other frontend code.
+When `DEMO_MODE=false`, set `OLLAMA_URL` and `OLLAMA_MODEL` to use Ollama first. Set `GEMINI_API_KEY` as the fallback provider. Do not put this key in Electron, React, renderer, preload, or other frontend code.
 
 ## Response Shape
 
@@ -66,7 +68,7 @@ Error responses:
 
 ### `GET /api/health`
 
-Returns backend status, demo mode status, and Gemini model name.
+Returns backend status, demo mode status, Ollama routing details, and Gemini fallback model name.
 
 ### `GET /api/state`
 

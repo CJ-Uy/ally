@@ -33,7 +33,9 @@ app.get("/", (req, res) => {
         healthUrl: "/api/health",
         apiBaseUrl: "/api",
         demoMode: config.demoMode,
-        model: config.geminiModel
+        providerRouting: "ollama-first",
+        ollamaModel: config.ollamaModel,
+        geminiModel: config.geminiModel
       },
       state: {}
     })
@@ -48,7 +50,10 @@ app.get("/api/health", (req, res) => {
       data: {
         status: "ok",
         demoMode: config.demoMode,
-        model: config.geminiModel,
+        providerRouting: "ollama-first",
+        ollamaUrlConfigured: Boolean(config.ollamaUrl),
+        ollamaModel: config.ollamaModel,
+        geminiModel: config.geminiModel,
         port: config.port
       },
       state: {}
@@ -90,5 +95,7 @@ app.use((error, req, res, next) => {
 
 app.listen(config.port, "127.0.0.1", () => {
   console.log(`Academic Ally Agent API running on http://localhost:${config.port}`);
-  console.log(`DEMO_MODE=${config.demoMode} | GEMINI_MODEL=${config.geminiModel}`);
+  console.log(
+    `DEMO_MODE=${config.demoMode} | OLLAMA_MODEL=${config.ollamaModel} | GEMINI_MODEL=${config.geminiModel}`
+  );
 });
