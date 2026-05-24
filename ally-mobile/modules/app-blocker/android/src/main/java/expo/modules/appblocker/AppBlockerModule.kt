@@ -47,20 +47,22 @@ class AppBlockerModule : Module() {
     Function("hasOverlayPermission") { hasOverlayPermission() }
 
     Function("openOverlayPermissionSettings") {
-      val ctx = appContext.reactContext ?: return@Function
-      val intent = Intent(
-        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-        Uri.parse("package:${ctx.packageName}")
-      ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-      ctx.startActivity(intent)
+      appContext.reactContext?.let { ctx ->
+        val intent = Intent(
+          Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+          Uri.parse("package:${ctx.packageName}")
+        ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+        ctx.startActivity(intent)
+      }
     }
 
     Function("openBatteryOptimizationSettings") {
-      val ctx = appContext.reactContext ?: return@Function
-      val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+      appContext.reactContext?.let { ctx ->
+        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+          flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        try { ctx.startActivity(intent) } catch (_: Exception) {}
       }
-      try { ctx.startActivity(intent) } catch (_: Exception) {}
     }
 
     /**
@@ -107,11 +109,12 @@ class AppBlockerModule : Module() {
     }
 
     Function("stopBlocking") {
-      val ctx = appContext.reactContext ?: return@Function
-      val i = Intent(ctx, BlockerService::class.java).apply {
-        action = BlockerService.ACTION_STOP
+      appContext.reactContext?.let { ctx ->
+        val i = Intent(ctx, BlockerService::class.java).apply {
+          action = BlockerService.ACTION_STOP
+        }
+        ctx.startService(i)
       }
-      ctx.startService(i)
     }
 
     Function("isSessionActive") { BlockerService.sessionActive }
