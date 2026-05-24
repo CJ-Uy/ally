@@ -5,9 +5,10 @@ import { fileURLToPath } from "node:url";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const data = JSON.parse(readFileSync(join(root, "src", "data", "evaluationCoverage.json"), "utf8"));
 const failures = [];
+const expectedTotalTestCases = 53;
 
-if (data.summary.totalTestCases !== 58) {
-  failures.push("summary.totalTestCases must be 58");
+if (data.summary.totalTestCases !== expectedTotalTestCases) {
+  failures.push(`summary.totalTestCases must be ${expectedTotalTestCases}`);
 }
 
 if (!Array.isArray(data.categories) || data.categories.length !== data.summary.categoryCount) {

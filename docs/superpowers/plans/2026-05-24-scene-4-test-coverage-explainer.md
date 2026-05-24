@@ -35,7 +35,7 @@ Use this exact JSON structure:
   "title": "Evaluation Coverage Map",
   "subtitle": "What the tests validate before the app demo",
   "summary": {
-    "totalTestCases": 58,
+    "totalTestCases": 53,
     "categoryCount": 5,
     "sourceLabel": "Academic Ally evaluation test set"
   },
@@ -75,7 +75,7 @@ Use this exact JSON structure:
     {
       "name": "Dashboard, Architecture, and Edge Cases",
       "shortName": "Edge Cases",
-      "count": 12,
+      "count": 7,
       "accent": "#caddec",
       "testedBehavior": "Checks final dashboard summaries, agent explanations, fallback behavior, data minimization, and hallucination resistance.",
       "features": ["Final dashboard", "Agent explanation", "Fallbacks", "Hallucination checks"]
@@ -156,8 +156,8 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const data = JSON.parse(readFileSync(join(root, "src", "data", "evaluationCoverage.json"), "utf8"));
 const failures = [];
 
-if (data.summary.totalTestCases !== 58) {
-  failures.push("summary.totalTestCases must be 58");
+if (data.summary.totalTestCases !== 53) {
+  failures.push("summary.totalTestCases must be 53");
 }
 
 if (!Array.isArray(data.categories) || data.categories.length !== data.summary.categoryCount) {
@@ -224,7 +224,7 @@ npm run check:evaluation
 Expected:
 
 ```text
-Evaluation coverage data verified: 58 tests across 5 categories.
+Evaluation coverage data verified: 53 tests across 5 categories.
 ```
 
 - [ ] **Step 4: Commit**
@@ -472,4 +472,3 @@ out/academic-ally-evaluation-coverage.mp4
 - [ ] **Step 5: Commit final generated source updates only**
 
 Do not commit generated MP4 or stills unless the project already tracks rendered outputs intentionally. Check `git status --short` and commit only source/documentation files that belong to this task.
-

@@ -36,7 +36,7 @@ Duration: 8-10 seconds.
 Visuals:
 
 - Ally-branded title card.
-- A small "58 test cases" sticker.
+- A small "53 test cases" sticker.
 - Five category chips appear around the title.
 
 Message:
@@ -133,9 +133,9 @@ Expected data shape:
 
 The extracted PDF facts to include are:
 
-- 58 total test cases.
+- 53 total test cases.
 - Five evaluation categories.
-- Category counts: 10, 12, 12, 12, and 12.
+- Category counts: 10, 12, 12, 12, and 7.
 - The main tested areas: routing/onboarding/profile; syllabus extraction/confirmation; diagnostic/workload planning; execution/notifications/focus/breaks; dashboard/architecture/edge cases.
 
 ## Visual Style
@@ -196,4 +196,3 @@ Before declaring the video ready:
 - Showing every individual test case.
 - Editing the main integrated script.
 - Changing the app UI or agent backend.
-
